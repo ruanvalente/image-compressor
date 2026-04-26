@@ -2,11 +2,11 @@
 
 Uma ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG, PNG, WebP e AVIF.
 
-[English](#english) | [Português](#português)
+[English](#english) | [Português](#portugues)
 
 ---
 
-## 🇺🇸 English
+## <a id="english"></a>🇺🇸 English
 
 ### About
 
@@ -132,7 +132,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ---
 
-## 🇧🇷 Português
+## <a id="portugues"></a>🇧🇷 Português
 
 ### Sobre
 

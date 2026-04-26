@@ -14,15 +14,15 @@ export function CompressionResultCard({ result, onDownload }: CompressionResultC
     <Card className="space-y-4">
       <div className="mb-4 grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-xs text-zinc-500">Original</p>
+          <p className="text-xs font-medium text-zinc-600">Original</p>
           <p className="font-semibold text-zinc-900">{formatBytes(result.originalSize)}</p>
         </div>
         <div>
-          <p className="text-xs text-zinc-500">Comprimida</p>
-          <p className="font-semibold text-green-600">{formatBytes(result.compressedSize)}</p>
+          <p className="text-xs font-medium text-zinc-600">Comprimida</p>
+          <p className="font-semibold text-green-700">{formatBytes(result.compressedSize)}</p>
         </div>
         <div>
-          <p className="text-xs text-zinc-500">Redução</p>
+          <p className="text-xs font-medium text-zinc-600">Redução</p>
           <Badge variant="info">{result.compressionRatio}%</Badge>
         </div>
       </div>

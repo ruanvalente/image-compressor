@@ -13,7 +13,7 @@ export function FormatSelector() {
 
   return (
     <fieldset>
-      <legend className="mb-2 block text-sm font-medium text-zinc-700">
+      <legend className="mb-2 block text-sm font-medium text-zinc-800">
         Formato de saída
       </legend>
       <div

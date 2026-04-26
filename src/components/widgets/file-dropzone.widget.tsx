@@ -105,12 +105,12 @@ export function FileDropzone() {
           priority
         />
       ) : (
-        <div className="text-center text-zinc-400">
+        <div className="text-center text-zinc-500">
           <p className="text-3xl" aria-hidden="true">
             📁
           </p>
-          <p className="mt-2 text-sm">Arraste uma imagem aqui</p>
-          <p className="text-xs">ou clique para selecionar</p>
+          <p className="mt-2 text-sm text-zinc-600">Arraste uma imagem aqui</p>
+          <p className="text-xs text-zinc-500">ou clique para selecionar</p>
         </div>
       )}
     </div>

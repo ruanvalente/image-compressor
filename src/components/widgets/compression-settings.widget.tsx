@@ -20,7 +20,7 @@ export function CompressionSettings() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="font-medium text-zinc-900">{file.name}</p>
-          <p className="text-sm text-zinc-500">{formatBytes(file.size)}</p>
+          <p className="text-sm text-zinc-600">{formatBytes(file.size)}</p>
         </div>
         <Button variant="danger" onClick={handleRemove}>
           Remover

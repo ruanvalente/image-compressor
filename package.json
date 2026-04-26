@@ -1,6 +1,10 @@
 {
   "name": "image-compressor",
   "version": "0.1.0",
+  "author": {
+    "name": "Ruan Valente",
+    "email": "contato.ruanvalente@gmail.com"
+  },
   "private": true,
   "scripts": {
     "dev": "next dev",

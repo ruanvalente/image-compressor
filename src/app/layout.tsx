@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://image-compressor-ruanvalente.vercel.app"),
+  metadataBase: new URL("https://image-compressor-web.netlify.app/"),
   title: "Image Compressor | Comprimir Imagens Online",
   description:
     "Ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG, PNG, WebP e AVIF. Rápido, seguro e gratuito.",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://image-compressor-ruanvalente.vercel.app",
+    url: "https://image-compressor-web.netlify.app/",
     siteName: "Image Compressor",
     title: "Image Compressor | Comprimir Imagens Online",
     description:
@@ -139,7 +139,10 @@ function Header() {
 
 function Footer() {
   return (
-    <footer className="mt-auto border-t border-zinc-200 bg-white py-6" role="contentinfo">
+    <footer
+      className="mt-auto border-t border-zinc-200 bg-white py-6"
+      role="contentinfo"
+    >
       <div className="mx-auto max-w-4xl px-4">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <p className="text-sm text-zinc-500">

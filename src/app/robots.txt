@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://image-compressor-ruanvalente.vercel.app/sitemap.xml
+Sitemap: https://image-compressor-web.netlify.app/sitemap.xml

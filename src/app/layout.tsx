@@ -129,7 +129,7 @@ function Header() {
     <header className="border-b border-zinc-200 bg-white py-4">
       <div className="mx-auto max-w-4xl px-4">
         <h1 className="text-xl font-bold text-zinc-900">🖼️ Image Compressor</h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-600">
           Comprimir imagens mantendo a melhor qualidade
         </p>
       </div>
@@ -145,7 +145,7 @@ function Footer() {
     >
       <div className="mx-auto max-w-4xl px-4">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-600">
             Desenvolvido por{" "}
             <Link
               href={socialLinks.portfolio}
@@ -165,7 +165,7 @@ function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub de Ruan Valente"
-                  className="text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="text-zinc-600 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <SocialIcon type="github" />
                 </Link>
@@ -176,7 +176,7 @@ function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn de Ruan Valente"
-                  className="text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="text-zinc-600 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <SocialIcon type="linkedin" />
                 </Link>
@@ -187,7 +187,7 @@ function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Portfólio de Ruan Valente"
-                  className="text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="text-zinc-600 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <SocialIcon type="portfolio" />
                 </Link>

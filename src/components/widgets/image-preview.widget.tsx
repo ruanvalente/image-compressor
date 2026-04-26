@@ -13,7 +13,7 @@ export function ImagePreview({ src, alt, emptyMessage = "Resultado aparecerá aq
   if (!src) {
     return (
       <Card variant="dashed" className="flex h-64 items-center justify-center">
-        <p className="text-zinc-400">{emptyMessage}</p>
+        <p className="text-zinc-500">{emptyMessage}</p>
       </Card>
     );
   }

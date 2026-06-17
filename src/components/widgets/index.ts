@@ -4,3 +4,5 @@ export { QualityControl } from "./quality-control.widget";
 export { CompressionSettings } from "./compression-settings.widget";
 export { ImagePreview } from "./image-preview.widget";
 export { CompressionResultCard } from "./compression-result-card.widget";
+export { PdfGenerator } from "./pdf-generator.widget";
+export { PdfDownloadCard } from "./pdf-download-card.widget";

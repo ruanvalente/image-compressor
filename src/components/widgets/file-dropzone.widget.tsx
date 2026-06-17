@@ -1,35 +1,66 @@
 "use client";
 
-import { useCallback, useRef, DragEvent, ChangeEvent } from "react";
+import { useCallback, useRef, useId, DragEvent, ChangeEvent } from "react";
 import Image from "next/image";
 import { useCompressorStore } from "@/lib/store/compressor-store";
 import { toast } from "@/lib/utils/toast";
 
-export function FileDropzone() {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { preview, dragActive, setDragActive, setFile, setPreview, setCompressed } =
-    useCompressorStore();
+interface FileDropzoneProps {
+  multiple?: boolean;
+  onFiles?: (files: File[]) => void;
+}
 
-  const handleFile = useCallback(
-    (f: File) => {
-      if (!f.type.startsWith("image/")) {
+export function FileDropzone({ multiple = false, onFiles }: FileDropzoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hintId = useId();
+  const {
+    preview,
+    dragActive,
+    setDragActive,
+    setFile,
+    setPreview,
+    setCompressed,
+  } = useCompressorStore();
+
+  const handleFiles = useCallback(
+    (f: File[]) => {
+      if (multiple && onFiles) {
+        const images = f.filter((file) => {
+          if (!file.type.startsWith("image/")) {
+            toast.error("Tipo de arquivo inválido", {
+              description: `${file.name} não é uma imagem válida`,
+            });
+            return false;
+          }
+          return true;
+        });
+        if (images.length > 0) {
+          onFiles(images);
+          toast.success(`${images.length} imagem(ns) adicionada(s)`);
+        }
+        return;
+      }
+
+      const file = f[0];
+      if (!file?.type.startsWith("image/")) {
         toast.error("Tipo de arquivo inválido", {
-          description: "Por favor, envie apenas imagens (JPEG, PNG, WebP, etc.)",
+          description:
+            "Por favor, envie apenas imagens (JPEG, PNG, WebP, etc.)",
         });
         return;
       }
-      setFile(f);
+      setFile(file);
       setCompressed(null);
 
       const reader = new FileReader();
       reader.onload = () => setPreview(reader.result as string);
-      reader.readAsDataURL(f);
+      reader.readAsDataURL(file);
 
       toast.success("Imagem carregada", {
-        description: f.name,
+        description: file.name,
       });
     },
-    [setFile, setPreview, setCompressed],
+    [multiple, onFiles, setFile, setPreview, setCompressed],
   );
 
   const handleDrop = useCallback(
@@ -37,39 +68,47 @@ export function FileDropzone() {
       e.preventDefault();
       e.stopPropagation();
       setDragActive(false);
-      const f = e.dataTransfer.files[0];
-      if (f) handleFile(f);
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) handleFiles(files);
     },
-    [handleFile, setDragActive],
+    [handleFiles, setDragActive],
   );
 
   const handleInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (f) handleFile(f);
+      const files = Array.from(e.target.files ?? []);
+      if (files.length > 0) handleFiles(files);
+      e.target.value = "";
     },
-    [handleFile],
+    [handleFiles],
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        inputRef.current?.click();
-      }
-    },
-    [],
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      inputRef.current?.click();
+    }
+  }, []);
+
+  const label = multiple
+    ? "Área para enviar imagens. Arraste imagens aqui ou clique para selecionar."
+    : "Área para enviar imagem. Arraste uma imagem aqui ou clique para selecionar.";
+
+  const hint = multiple ? "Arraste imagens aqui" : "Arraste uma imagem aqui";
+
+  const subHint = multiple
+    ? "ou clique para selecionar (JPEG, PNG, WebP, AVIF)"
+    : "ou clique para selecionar";
 
   return (
     <div
       role="button"
       tabIndex={0}
-      aria-label="Área para enviar imagem. Arraste uma imagem aqui ou clique para selecionar."
-      aria-describedby="dropzone-hint"
+      aria-label={label}
+      aria-describedby={hintId}
       className={`relative flex h-64 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
         dragActive ? "border-blue-500 bg-blue-50" : "border-zinc-300 bg-white"
-      } ${!preview ? "hover:border-zinc-400" : ""}`}
+      } ${!preview || multiple ? "hover:border-zinc-400" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -89,14 +128,15 @@ export function FileDropzone() {
         id="file-input"
         type="file"
         accept="image/*"
+        multiple={multiple}
         className="hidden"
         onChange={handleInputChange}
         aria-hidden="true"
       />
-      <span id="dropzone-hint" className="sr-only">
-        Selecione uma imagem do seu dispositivo para comprimir
+      <span id={hintId} className="sr-only">
+        {hint}
       </span>
-      {preview ? (
+      {!multiple && preview ? (
         <Image
           src={preview}
           alt="Prévia da imagem selecionada"
@@ -109,8 +149,8 @@ export function FileDropzone() {
           <p className="text-3xl" aria-hidden="true">
             📁
           </p>
-          <p className="mt-2 text-sm text-zinc-600">Arraste uma imagem aqui</p>
-          <p className="text-xs text-zinc-500">ou clique para selecionar</p>
+          <p className="mt-2 text-sm text-zinc-600">{hint}</p>
+          <p className="text-xs text-zinc-500">{subHint}</p>
         </div>
       )}
     </div>

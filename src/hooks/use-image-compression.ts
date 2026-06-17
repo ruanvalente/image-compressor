@@ -1,8 +1,29 @@
 "use client";
 
 import { useCallback } from "react";
-import { useCompressorStore, type CompressionResult } from "@/lib/store/compressor-store";
+import {
+  useCompressorStore,
+  type CompressionResult,
+} from "@/lib/store/compressor-store";
 import { toast } from "@/lib/utils/toast";
+
+function base64ToBlob(base64: string, mimeType: string): Blob {
+  const byteChars = atob(base64);
+  const chunks: BlobPart[] = [];
+
+  for (let offset = 0; offset < byteChars.length; offset += 512) {
+    const slice = byteChars.slice(offset, offset + 512);
+    const byteNumbers = new Array<number>(slice.length);
+
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    chunks.push(new Uint8Array(byteNumbers));
+  }
+
+  return new Blob(chunks, { type: mimeType });
+}
 
 export function useImageCompression() {
   const { file, settings, setCompressed, setLoading } = useCompressorStore();
@@ -53,15 +74,24 @@ export function useImageCompression() {
             ? "image/webp"
             : "image/avif";
 
+    const blob = base64ToBlob(compressed.data, mimeType);
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
-    link.href = `data:${mimeType};base64,${compressed.data}`;
+    link.href = url;
     link.download = compressed.filename;
     link.click();
+
+    URL.revokeObjectURL(url);
 
     toast.success("Download iniciado", {
       description: `${compressed.filename} está sendo baixado`,
     });
   }, []);
 
-  return { compress, download, isLoading: useCompressorStore((s) => s.loading) };
+  return {
+    compress,
+    download,
+    isLoading: useCompressorStore((s) => s.loading),
+  };
 }

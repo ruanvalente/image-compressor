@@ -392,13 +392,71 @@ Rotas e widgets importam deste módulo (só valores/tipos → zero custo no bund
 
 ---
 
+## 1️⃣ Fase 1 — Correções de bugs e Quick Wins (concluída em 06/08/2026)
+
+> Escopo: H1 → H4 → H3 → M8 + demais Quick Wins (sizes/preload, type=button, sitemap, check 10MB, error.tsx). Nenhuma mudança estrutural (Fase 2+) foi antecipada.
+
+### ✅ Execução
+
+| Item | Problema | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **H1** | `setLoading(true)` sem `setLoading(false)` — botão trava em "Comprimindo..."/"Gerando PDF..." para sempre após o 1º uso | Padrão R1: leitura via `getState()` + `try/catch/finally` garantindo `loading=false` em sucesso **e** erro; erros tratados localmente via toast com a mensagem real do servidor | `src/hooks/use-image-compression.ts`, `src/hooks/use-pdf-generation.ts` |
+| **H4** | Dead code `error`/`setError` (stores) e `toast.info`/`ToastType` (toast.ts) | Removidos dos dois stores e do `toast.ts` | `src/lib/store/compressor-store.ts`, `src/lib/store/pdf-store.ts`, `src/lib/utils/toast.ts` |
+| **H3** | `base64ToBlob` duplicado nos 2 hooks | Extraído para `src/lib/utils/base64.ts`; hooks passam a importá-lo | `src/lib/utils/base64.ts` (novo) |
+| **M8** | `priority` **deprecated** no Next 16; `fill` sem `sizes` gera warning e penalidade de otimização | `priority` → `preload` no dropzone; `sizes="(max-width: 1024px) 100vw, 50vw"` nos dois `next/image` com `fill` | `src/components/widgets/file-dropzone.widget.tsx`, `src/components/widgets/image-preview.widget.tsx` |
+| **QW 5** | Botões interativos sem `type="button"` (radios, remover, limpar, ações) | Default `type="button"` no componente `Button` (sobrescrevível via prop); explícito nas tabs do `page.tsx` | `src/components/ui/button.ui.tsx`, `src/app/page.tsx` |
+| **QW 6** | Dropzone de compressão validava só o `type`, sem limite de 10MB | Constante local `MAX_COMPRESS_FILE_SIZE = 10MB` + check com toast de erro; `TODO(Fase 2 - H2)` apontando para a centralização em `src/lib/constants.ts` | `src/components/widgets/file-dropzone.widget.tsx` |
+| **QW 7** | `sitemap.xml` referenciado no `robots.txt` mas inexistente (L1 — 404 para crawlers) | `src/app/sitemap.ts` criado (página única, via `MetadataRoute.Sitemap`) | `src/app/sitemap.ts` (novo) |
+| **QW 8** | Sem error boundary (parte de M6) | `src/app/error.tsx` com mensagem amigável + botão "Tentar novamente" | `src/app/error.tsx` (novo) |
+
+### 📌 Notas e decisões
+
+1. **Hooks com padrão R1:** `useCallback([])` + `getState()` eliminam as dependências de closure (`file`/`settings`/`files`/`pageSize`) e o hook passa a subscrever o store **apenas** pelo seletor `isLoading` → menos re-renders (M1 é concluído por completo na Fase 2). O `toast.promise` foi substituído por `toast.success`/`toast.error` explícitos: o loading já é refletido no botão e o `finally` garante o reset mesmo em falha de rede.
+2. **`error.tsx` usa `retry`, não `reset`** — convenção do Next 16 confirmada na doc instalada (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md`), diferente do Next 13/14.
+3. **Desvio de `sizes`:** o plano sugeria `(max-width: 1024px) 50vw, 33vw`; apliquei `(max-width: 1024px) 100vw, 50vw` por refletir o layout real (container `max-w-4xl`, grid `lg:grid-cols-2` → coluna única no mobile, meia coluna no desktop). Valor documentado para reavaliação se o layout mudar.
+4. **Check 10MB** no dropzone replica o valor da rota `api/compress/route.ts:7`. A duplicação é intencional e temporária — a fonte única de verdade chega na Fase 2 (H2/R5).
+5. **Sem mudanças estruturais** (page ainda é Client Component; dropzone ainda acoplado ao store; `dragActive` ainda global) — esses pontos são M3/M2/M1 e ficam para Fase 2/Fase 3, evitando sobreposição com a refatoração.
+
+### 🔍 Revisão de código (resultado da Fase 1)
+
+- Revisão automatizada executada sobre o diff da Fase 1. Confirmações: deprecação `priority`→`preload` documentada em `image.md:291-293` (Next 16.3.0 instalado); `error.tsx` com `retry()` conforme doc oficial; `type="button"` aplicado no componente `Button` (default) e nas tabs; `base64ToBlob` sem duplicação restante; nenhuma referência a `setError`/`toast.info`/`ToastType`/`priority` restante em `src/` (exceto `priority` do sitemap, que é metadata de SEO e não o prop do Image).
+- Ponto de atenção para a Fase 2: `toast.promise` continua exportado em `toast.ts` mas **sem uso** após a troca dos hooks para `toast.success`/`toast.error`. Decidido manter (API útil do wrapper) — mas se confirmar sem uso na Fase 2, remover junto do H4 residual.
+
+#### Iteração pós-revisão (achados do review)
+
+Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos de baixa severidade):
+
+1. **Erros não-JSON e falhas de rede nos hooks** (`use-image-compression.ts` / `use-pdf-generation.ts`): o `res.json()` era chamado antes de checar `res.ok` e sem guarda — corpo não-JSON (ex.: página de erro do CDN/hosting) lançava `SyntaxError` e exibia o texto cru ao usuário. Novo fluxo: parse defensivo (`res.json().catch(() => null)`), mensagem localizada com `HTTP <status>` como fallback, e `TypeError` de `fetch` (offline/timeout/DNS) exibido como "Falha de conexão — Verifique sua internet e tente novamente" em vez do "Failed to fetch" do browser.
+2. **`lastModified` não-determinístico** (`sitemap.ts`): `new Date()` regenerava timestamp a cada build, causando re-fetch desnecessário de crawlers/CDN. Trocado por data fixa do commit inicial do projeto (`2026-04-26`).
+3. **`preload` no preview do dropzone** (`file-dropzone.widget.tsx:155`): mantido conforme a migração Next 16, mas sem benefício real — o preview em data-URL só existe após seleção. Reavaliado na Fase 2.
+
+**Revalidação pós-ajustes:** `npm run lint` ✅ · `npx tsc --noEmit` ✅.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `npm run lint` | ✅ |
+| `npx tsc --noEmit` | ✅ (exit 0) |
+| `npm run build` | ✅ rotas: `/` (estática), `/_not-found`, `/api/compress`, `/api/pdf`, `/robots.txt`, `/sitemap.xml` |
+| `GET /` | ✅ 200 |
+| `GET /robots.txt` | ✅ 200 |
+| `GET /sitemap.xml` | ✅ 200 — XML válido com `<loc>` da home |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}` (8.6 KB → 950 B, ratio 88.9%) |
+| `POST /api/pdf` (2 imagens, A4) | ✅ 200 — PDF válido (`%PDF-`), `pageCount: 2`, 5.9 KB |
+| `POST /api/compress` (arquivo 11 MB) | ✅ 400 `"Arquivo muito grande. Máximo: 10MB"` |
+
+**Resumo:** bug crítico H1 corrigido (loading sempre retorna a `false`), dead code removido, `base64ToBlob` unificado e os 5 Quick Wins aplicados. Nenhuma regressão nos dois fluxos principais. **Fase 1 concluída — base pronta para a Fase 2.**
+
+---
+
 ## 🗺️ Roadmap de implementação (ordem otimizada)
 
 **Etapa 0 — Dependências em dia (pré-requisito, ~1 h)** ✅ *concluída em 06/08/2026 — ver seção "Etapa 0" acima*
 `npm outdated` → atualizar patches/minors (Next 16.3, React 19.2.8, sharp 0.35, zustand, tailwind 4.3) → avaliar majors (TS 7/eslint 10) com a rede de testes do M7 → decisão documentada sobre o `pdf-lib` (L3). Concluir antes de iniciar qualquer Fase. **Estado final:** minors/patches aplicados e validados; majors adiados (TS 7, ESLint 10, @types/node 26); `pdf-lib` congelado com reavaliação na Fase 4.
 
-**Fase 1 — Correções de bugs e Quick Wins (½ dia)**
-H1 (loading travado) → H4 (dead code) → H3 (extração de utilitários) → M8 + demais Quick Wins (sizes/preload, type=button, sitemap, check 10MB, error.tsx).
+**Fase 1 — Correções de bugs e Quick Wins (½ dia)** ✅ *concluída em 06/08/2026 — ver seção "Fase 1" acima*
+H1 (loading travado) → H4 (dead code) → H3 (extração de utilitários) → M8 + demais Quick Wins (sizes/preload, type=button, sitemap, check 10MB, error.tsx). **Estado final:** H1/H4/H3 resolvidos; M8 e os 5 Quick Wins aplicados e validados; nenhuma mudança estrutural antecipada.
 
 **Fase 2 — Fundações (1–2 dias)**
 H2/H3 (módulo `constants.ts` + tipos compartilhados) → M2 (dropzone controlado + hook `useFileDropzone`) → M1 (seletores + `dragActive` local). *Testes: adicionar Vitest e cobrir `formatBytes`, validadores e utilidades antes das mudanças estruturais.*

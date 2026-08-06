@@ -509,6 +509,65 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 
 ---
 
+## 3️⃣ Fase 3 — Arquitetura (concluída em 06/08/2026)
+
+> Escopo: M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na rota PDF + `pageCount` correto + `error.tsx`/`loading.tsx`) → M7 (CI: lint + tsc + test + build).
+
+### ✅ Execução
+
+| Item | Problema | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **M3** | Página inteira era Client Component — todo o conteúdo (inclusive estático) no bundle JS, sem SSR/SEO da estrutura | `page.tsx` virou **Server Component** renderizando `<ToolSwitcher/>`; `CompressMode` e `PdfMode` extraídos para componentes client dedicados; modo PDF carregado com `next/dynamic` (lazy) + fallback de loading; `ToolSwitcher` (client) guarda o `mode` e mantém os resets de store ao trocar de aba | `src/app/page.tsx`, `tool-switcher.widget.tsx` (novo), `compress-mode.widget.tsx` (novo), `pdf-mode.widget.tsx` (novo) |
+| **M6 (loading)** | Sem `loading.tsx` de rota | `src/app/loading.tsx` com skeleton (animação `animate-pulse`); `error.tsx` já existia desde a Fase 1 | `src/app/loading.tsx` (novo) |
+| **M6 (magic bytes)** | Rota `/api/pdf` aceitava MIME falsificado → `sharp` explodia em 500 genérico | Validação de assinatura **por arquivo** (`validatePdfFileSignature`) reutilizando `IMAGE_SIGNATURES` + check de ftyp/brand para AVIF → **400 com o nome do arquivo**; falha de leitura pós-validação (conteúdo corrompido) também vira 400 com nome | `src/app/api/pdf/route.ts`, `src/lib/validation.ts` |
+| **M6 (pageCount)** | `pageCount: files.length` contava arquivos pulados por `continue` (dimensão ilegível) | Contador real de páginas adicionadas (`pageCount += 1` a cada `addPage`) | `src/app/api/pdf/route.ts` |
+| **M6 (AVIF)** | `IMAGE_SIGNATURES.avif` exigia box ftyp de exatamente 24 bytes — AVIFs reais (ex.: sharp gera 28, muitos usam 32) eram rejeitados como "Arquivo inválido" | Assinatura AVIF passou a validar a **estrutura** (presença do box `ftyp` + major brand `avif`/`avis`/`mif1`), aceitando qualquer tamanho de box; `ALLOWED_MIME_TYPES` continua derivando de uma única lista (signatures + avif) | `src/lib/constants.ts`, `src/lib/validation.ts` |
+| **M7** | Sem script `test`/`typecheck` padronizado nem CI | GitHub Actions `.github/workflows/ci.yml` (Bun: `lint` + `typecheck` + `test` + `build`) em push/PR; script `typecheck` adicionado ao `package.json` | `.github/workflows/ci.yml` (novo), `package.json` |
+
+### 📌 Notas e decisões
+
+1. **`next/dynamic` validado na doc instalada** (`node_modules/next/dist/docs/01-app/02-guides/lazy-loading.md`): continua suportado no App Router do Next 16 como composto de `React.lazy()` + `Suspense`. A guide alerta que **Server Component não faz code splitting automático ao importar Client Component dinamicamente** — por isso o `dynamic()` vive no `ToolSwitcher` (client), não no `page.tsx`.
+2. **Página RSC comprovada por SSR:** `GET /` entrega o shell estático (header, tabs, botão "Comprimir Imagem") já renderizado no servidor, sem marcação `"use client"` no HTML final.
+3. **Chunk do PDF separado:** o conteúdo do modo PDF reside em chunks próprios no build (verificado), baixados sob demanda ao trocar para a aba PDF — bundle inicial e LCP reduzidos.
+4. **Circular import evitado:** `CompressMode`/`PdfMode` importam os widgets irmãos por caminho direto (não via barrel `index.ts`) para evitar o ciclo `index.ts → ToolSwitcher → compress-mode → index.ts`. `index.ts` exporta `ToolSwitcher`; o único consumidor do barrel na árvore é `page.tsx`.
+5. **AVIF — mudança de comportamento documentada (melhoria):** a validação deixou de exigir tamanho exato do box e passou a validar estrutura (`ftyp` + brand). Confirmação empírica: `sharp` gera AVIF com ftyp de **28 bytes** (`0x1c`) e major brand `avif` — a assinatura antiga rejeitaria AVIFs gerados pela própria ferramenta. A lista de marcas é fechada, então continua impossível falsificar com conteúdo arbitrário.
+6. **`loading.tsx` em rota estática:** a home é prerendered, então o `loading.tsx` raramente renderiza — adicionado para completar o M6 e servir navegação/streaming futuro.
+7. **CI com Bun** (gerenciador do projeto — `bun.lock`): `bun install --frozen-lockfile` + os 4 scripts. Novos testes (46 no total) rodam no CI.
+8. **`try/catch` de `sharp(...).metadata()`** na rota PDF converte falha de leitura (cabeçalho válido, conteúdo corrompido) em 400 com o nome do arquivo — endereça o ponto do audit "arquivo inválido → 500 genérico em vez de 400".
+
+### 🔍 Revisão de código (resultado da Fase 3)
+
+- Revisão automatizada sobre o diff da Fase 3. **BLOCKER: nenhum.** Confirmações: página RSC + lazy PDF funcionais (SSR e code-split verificados no build); validação por arquivo responde 400 com nome; `pageCount` reflete páginas reais; AVIF com ftyp de 28/32 bytes aceito; workflow de CI coerente com os scripts do `package.json`; nenhuma referência órfã a `IMAGE_SIGNATURES.avif`; `npm test` 46/46 ✅.
+- Ajustes aplicados pós-revisão:
+  1. **Circular import eliminado** — `compress-mode.widget.tsx`/`pdf-mode.widget.tsx` passaram a importar widgets irmãos por caminho direto (ver nota 4).
+  2. **🐛 REGRESSÃO WebP corrigida (achado da revisão de código):** a assinatura `image/webp` original (`[0x57,0x45,0x42,0x50]` checada no offset 0) estava **errada** — WebP é um container RIFF: `RIFF` nos bytes 0–3 e `WEBP` nos bytes **8–11** (verificado em WebP real gerado pelo `sharp`). Como a Fase 3 passou a validar assinatura na rota PDF, todo `.webp` válido falharia com 400. Correção: `validateWebpSignature` (estrutural, como o AVIF) checa `RIFF` + `WEBP` nas posições corretas; `"image/webp"` movido para a lista de formatos-container em `ALLOWED_MIME_TYPES`. +3 testes (RIFF válido, sem marker WEBP, sem header RIFF). **Revalidação end-to-end:** `POST /api/pdf` e `/api/compress` com WebP real ✅ 200.
+  3. **Gap de M6 fechado (achado da revisão):** arquivo com cabeçalho/signature válidos mas corpo truncado falhava em `embedImage` → 500 genérico. `embedImage` agora está em `try/catch` → 400 com o nome do arquivo, completando o objetivo do M6 ("conteúdo corrompido → 400 com nome").
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 49 passed (antes 38; +11 novos: AVIF 24/32 bytes, brands `avis`/`mif1`, ftyp ausente, brand desconhecido, WebP RIFF válido/sem marker/sem header, `validatePdfFileSignature` com/sem nome) |
+| `bun run build` | ✅ rotas: `/` (estática), `/_not-found`, `/api/compress`, `/api/pdf`, `/robots.txt`, `/sitemap.xml` |
+| `GET /` | ✅ 200 — HTML SSR com shell estático; chunks do PDF separados (lazy) |
+| `GET /robots.txt` · `GET /sitemap.xml` | ✅ 200 |
+| `POST /api/compress` (PNG → webp) | ✅ 200 `{success:true}` |
+| `POST /api/compress` (AVIF → webp) | ✅ 200 — confirma o fix da assinatura AVIF end-to-end |
+| `POST /api/compress` (arquivo 11 MB) | ✅ 400 `"Arquivo muito grande. Máximo: 10MB"` |
+| `POST /api/pdf` (2 imagens, A4, "relatorio final.pdf") | ✅ 200 — `pageCount: 2`, `filename: "relatorio_final.pdf"` |
+| `POST /api/pdf` (AVIF, original) | ✅ 200 — AVIF aceito no fluxo PDF |
+| `POST /api/pdf` (WebP + PNG, A4) | ✅ 200 — `pageCount: 2` (WebP aceito após correção da assinatura) |
+| `POST /api/compress` (WebP → webp) | ✅ 200 — assinatura WebP corrigida também no fluxo de compressão |
+| `POST /api/pdf` (PNG truncado — header válido, corpo cortado) | ✅ 400 `"Não foi possível ler a imagem \"corrupt.png\"..."` (antes: 500 genérico) |
+| `POST /api/pdf` (MIME falsificado: texto com `type=image/png`) | ✅ 400 `"fake.png: Arquivo inválido..."` — nome do arquivo na resposta |
+| `POST /api/pdf` (`type=text/plain`) | ✅ 400 `"Formato não suportado: text/plain..."` |
+
+**Resumo:** página convertida a RSC com client islands e modo PDF lazy (M3), rota PDF endurecida com validação de assinatura por arquivo + `pageCount` real + fix de AVIF (M6) e CI com lint/typecheck/test/build (M7). Nenhuma regressão nos dois fluxos principais. **Fase 3 concluída — base pronta para a Fase 4.**
+
+---
+
 ## 🗺️ Roadmap de implementação (ordem otimizada)
 
 **Etapa 0 — Dependências em dia (pré-requisito, ~1 h)** ✅ *concluída em 06/08/2026 — ver seção "Etapa 0" acima*
@@ -520,8 +579,8 @@ H1 (loading travado) → H4 (dead code) → H3 (extração de utilitários) → 
 **Fase 2 — Fundações (1–2 dias)** ✅ *concluída em 06/08/2026 — ver seção "Fase 2" acima*
 H2/H3 (módulo `constants.ts` + tipos compartilhados) → M2 (dropzone controlado + hook `useFileDropzone`) → M1 (seletores + `dragActive` local). *Testes: adicionar Vitest e cobrir `formatBytes`, validadores e utilidades antes das mudanças estruturais.* **Estado final:** constantes/tipos/validadores centralizados em `src/lib/constants.ts`, `src/lib/types.ts`, `src/lib/validation.ts`; dropzone controlado via `useFileDropzone`; seletores granulares em todos os widgets; Vitest com 38 testes (M7 parcial).
 
-**Fase 3 — Arquitetura (2–3 dias)**
-M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na rota PDF + `pageCount` correto + `error.tsx`) → M7 (CI: lint + tsc + test + build).
+**Fase 3 — Arquitetura (2–3 dias)** ✅ *concluída em 06/08/2026 — ver seção "Fase 3" acima*
+M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na rota PDF + `pageCount` correto + `error.tsx`/`loading.tsx`) → M7 (CI: lint + tsc + test + build). **Estado final:** página convertida a RSC com client islands e modo PDF lazy; rota PDF com validação de assinatura por arquivo (400 com nome), `pageCount` real e fix de assinatura AVIF; CI com `lint + typecheck + test + build` no GitHub Actions; 46 testes Vitest.
 
 **Fase 4 — Polimento (1–2 dias)**
 M4 (ARIA de teclado para tabs/radios) → M5 (decisão e correção do dark mode) → Itens baixos (env de URL, viewport/OG image, avaliação do pdf-lib, atualização do README).

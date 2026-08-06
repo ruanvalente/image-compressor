@@ -4,7 +4,8 @@ import { useCompressorStore } from "@/lib/store/compressor-store";
 import { Card, RangeSlider } from "@/components/ui";
 
 export function QualityControl() {
-  const { settings, setSettings } = useCompressorStore();
+  const quality = useCompressorStore((s) => s.settings.quality);
+  const setSettings = useCompressorStore((s) => s.setSettings);
 
   return (
     <Card>
@@ -12,7 +13,7 @@ export function QualityControl() {
         label="Qualidade"
         min={10}
         max={100}
-        value={settings.quality}
+        value={quality}
         onChange={(e) => setSettings({ quality: Number(e.target.value) })}
         valueFormat={(v) => `${v}%`}
       />

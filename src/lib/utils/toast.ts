@@ -28,17 +28,4 @@ export const toast = {
       duration: options?.duration ?? defaultDuration,
     });
   },
-
-  promise: <T>(promise: Promise<T>, messages: {
-    loading: string;
-    success: string;
-    error: string;
-  }) => {
-    return sonnerToast.promise(promise, {
-      loading: messages.loading,
-      success: messages.success,
-      error: messages.error,
-      duration: defaultDuration,
-    });
-  },
 };

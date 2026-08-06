@@ -1,19 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
-import {
-  useCompressorStore,
-  type CompressionResult,
-} from "@/lib/store/compressor-store";
+import { useCompressorStore } from "@/lib/store/compressor-store";
 import { toast } from "@/lib/utils/toast";
 import { base64ToBlob } from "@/lib/utils/base64";
-
-const MIME_TYPES: Record<string, string> = {
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  avif: "image/avif",
-};
+import { COMPRESS_MIME_TYPES } from "@/lib/constants";
+import type { CompressionResult } from "@/lib/types";
 
 export function useImageCompression() {
   const compress = useCallback(async () => {
@@ -67,8 +59,7 @@ export function useImageCompression() {
     const { compressed } = useCompressorStore.getState();
     if (!compressed) return;
 
-    const mimeType = MIME_TYPES[compressed.format] ?? "application/octet-stream";
-    const blob = base64ToBlob(compressed.data, mimeType);
+    const blob = base64ToBlob(compressed.data, COMPRESS_MIME_TYPES[compressed.format] ?? "application/octet-stream");
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement("a");

@@ -450,6 +450,65 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 
 ---
 
+## 2️⃣ Fase 2 — Fundações (concluída em 06/08/2026)
+
+> Escopo: H2/H3 (fonte única de constantes/tipos) → M2 (dropzone controlado + hook `useFileDropzone`) → M1 (seletores granulares + `dragActive` local). Testes Vitest adicionados antes das mudanças estruturais (M7 parcial).
+
+### ✅ Execução
+
+| Item | Problema | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **H2** | Limites, formatos e assinaturas duplicados entre cliente e servidor (risco de drift) | Módulo único `src/lib/constants.ts` com limites (`MAX_COMPRESS_FILE_SIZE`, `PDF_MAX_FILES/FILE_SIZE/TOTAL_SIZE`), `COMPRESS_FORMATS`, `COMPRESS_MIME_TYPES`, `IMAGE_SIGNATURES`, `ALLOWED_MIME_TYPES`/`PDF_ALLOWED_TYPES` (derivadas da mesma lista), `PAGE_SIZE_OPTIONS`, `PAGE_SIZE_PT`. Widgets e rotas importam dele — zero imports server-only, seguro no bundle cliente | `src/lib/constants.ts` (novo), `api/compress/route.ts`, `api/pdf/route.ts`, `file-dropzone.widget.tsx`, `pdf-generator.widget.tsx`, `page.tsx` |
+| **H3** | `sanitizeFilename` duplicado e divergente; `PageSize`/`CompressionResult.format` duplicados entre cliente e servidor | `sanitizeFilename` paramétrico em `src/lib/utils/filename.ts` (extensão opcional); tipos centralizados em `src/lib/types.ts` (`CompressFormat`, `PageSize`, `CompressionResult`, `CompressionSettings`, `PdfResult`); `CompressionResult.format` agora é a union `CompressFormat` nos dois lados | `src/lib/types.ts` (novo), `src/lib/utils/filename.ts` (novo), stores, hooks, widgets, rotas |
+| **H2 (validador)** | Lógica de validação embutida nas rotas (intestável) | Extraídos validadores puros para `src/lib/validation.ts`: `ValidationError`, `validateFileSignature`, `validateCompressFile`, `parseCompressOptions`, `calculateCompressionRatio`, `validatePdfFiles` — usados pelas duas rotas | `src/lib/validation.ts` (novo), rotas |
+| **M2** | `FileDropzone` acoplado ao compressor-store mesmo no modo PDF | Componente controlado: props `multiple`, `preview`, `accept`, `onFiles` — nunca toca em zustand. Novo hook `useFileDropzone` (estado local de `dragActive` + handlers drag/click). Validação de arquivos movida para os consumidores (`CompressMode` em `page.tsx`; `PdfGenerator.handleFiles`) | `src/components/widgets/file-dropzone.widget.tsx`, `src/hooks/use-file-dropzone.ts` (novo), `src/app/page.tsx`, `pdf-generator.widget.tsx` |
+| **M1** | Inscrição no store inteiro re-renderizava todos os widgets a cada mudança | Seletores granulares (`useCompressorStore((s) => s.quality)` etc.) em todos os widgets e na `page.tsx`; `dragActive`/`setDragActive` removidos do compressor-store | widgets, `page.tsx`, `compressor-store.ts` |
+| **M7 (parcial)** | Sem testes nem script `test` | Vitest 4.1.10 + `vitest.config.mts` + 38 testes cobrindo `formatBytes`, `base64ToBlob`, `sanitizeFilename` e todos os validadores; scripts `test`/`test:watch` | `vitest.config.mts`, `package.json`, `src/lib/**/*.test.ts` |
+| **H4 residual** | `toast.promise` confirmado sem uso (nota pendente da Fase 1) | Removido do wrapper `toast.ts` | `src/lib/utils/toast.ts` |
+| **Fase 1 pendente** | `preload` no preview do dropzone sem benefício real (data-URL só existe após seleção) | Removido; `preload` permanece apenas onde há LCP real (nenhum lugar restante no fluxo de prévia) | `file-dropzone.widget.tsx` |
+
+### 📌 Notas e decisões
+
+1. **`sanitizeFilename` unificado com semântica melhorada no PDF:** a versão paramétrica sempre remove a extensão original e anexa a solicitada. Caso PDF: antes `"relatorio.png"` → `"relatorio.png.pdf"`; agora → `"relatorio.pdf"`. Comportamento de compressão idêntico ao anterior. Mudança intencional e documentada.
+2. **`IMAGE_SIGNATURES` tipado `Record<string, readonly number[]>`** (não `as const` puro) para permitir indexação dinâmica por `string` na validação — mantém a segurança de lista fechada porque os valores continuam literais.
+3. **`PDF_ALLOWED_TYPES` e `ALLOWED_MIME_TYPES` derivam da mesma `Object.keys(IMAGE_SIGNATURES)`** — uma única lista de MIMEs suportados para as duas rotas; impossível dessincronizar.
+4. **Validação movida para os consumidores** (M2) preserva todos os toasts; o toast de sucesso do modo PDF agora usa o número real de arquivos adicionados (`validFiles.length`), mais preciso que o filtro pré-adição do dropzone.
+5. **`dragActive` como estado local** elimina re-renders em cadeia. Limitação pré-existente herdada: `dragleave` dispara ao passar sobre filhos (preview/texto), causando flicker do highlight — não é regressão; reavaliar na Fase 4 se necessário.
+6. **Vitest sem jsdom** — todas as utilidades testadas são puras e usam APIs globais do Node (Blob, atob, File). Testes de componentes ficam para quando houver necessidade.
+7. **`error.tsx` com `retry()`** mantido da Fase 1 (convenção Next 16); a validação de assinatura por arquivo na rota PDF (parte do M6) permanece para a Fase 3.
+8. **Página continua Client Component** — a conversão para RSC + `ToolSwitcher` + `next/dynamic` é o M3, escopo da Fase 3. Sem mudança estrutural antecipada nesta fase.
+9. **Conhecimento herdado (reavaliar no M6, Fase 3):** `IMAGE_SIGNATURES.avif` exige ftyp box de tamanho exatamente `0x18` (24 bytes). Muitos AVIF reais usam ftyp de 32 bytes (marcas `avif`/`avis`) e seriam rejeitados como "Arquivo inválido". Comportamento pré-existente, movido verbatim na Fase 2; revisar a assinatura AVIF ao centralizar a validação de magic bytes por arquivo na rota PDF.
+
+### 🔍 Revisão de código (resultado da Fase 2)
+
+- Revisão automatizada executada sobre o diff da Fase 2. **BLOCKER: nenhum.** Confirmações: `npm test` 38/38 ✅ · `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run build` ✅ sem warnings; nenhuma duplicação remanescente de constantes/validadores; padrão `useRef`+`useEffect` (latest-callback) do `useFileDropzone` correto; toasts preservados; remoção de `dragActive` do store completa.
+- Ajustes aplicados pós-revisão:
+  1. **Config Vitest renomeada** `vitest.config.ts` → `vitest.config.mts` (suprime warning ESM-in-CJS do Vite `configLoader: 'native'`).
+  2. **`fileCount` redundante** removido no `pdf-generator.widget.tsx` (usa `files.length`).
+  3. **Mensagem de formato ausente mais clara** em `parseCompressOptions` (evita `Formato não suportado: null`).
+  4. **Teste de truncamento pinado** (`sanitizeFilename`) — agora verifica o resultado exato (255 chars + extensão) em vez de limite solto.
+  5. **`toast.promise` removido** (H4 residual confirmado sem uso).
+  6. **`sanitizeFilename` reordenado** — extensão removida antes do `slice(0, 255)`, garantindo que o limite se aplica ao nome base; a extensão anexada depois nunca é truncada no meio. Resultado idêntico em todos os casos testados (38/38 seguem passando).
+  7. **Fallback de MIME no download restaurado** (`?? "application/octet-stream"`) em `use-image-compression.ts` — comportamento defensivo que existia antes da centralização; type-safe, mas protege o download contra resposta de servidor fora do contrato.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `npm test` | ✅ 38 passed (4 arquivos: format-bytes 5, base64 3, filename 6, validation 24) |
+| `npm run lint` | ✅ |
+| `npx tsc --noEmit` | ✅ (exit 0) |
+| `npm run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/robots.txt`, `/sitemap.xml` |
+| `GET /` | ✅ 200 |
+| `GET /sitemap.xml` | ✅ 200 |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}`, filename `img1.webp` (sanitização + extensão), ratio 86.4% |
+| `POST /api/compress` (arquivo 11 MB) | ✅ 400 `"Arquivo muito grande. Máximo: 10MB"` (constante compartilhada) |
+| `POST /api/pdf` (2 imagens, A4, "relatório final.pdf") | ✅ 200 — filename `relat_rio_final.pdf`, `pageCount: 2`, PDF válido (`%PDF-`) |
+
+**Resumo:** fonte única de verdade para regras de segurança (H2), tipos e utilitários compartilhados (H3), dropzone desacoplado e controlado (M2), re-renders minimizados por seletores granulares (M1) e primeira rede de testes (M7 parcial, 38 testes). Nenhuma regressão nos dois fluxos principais. **Fase 2 concluída — base pronta para a Fase 3.**
+
+---
+
 ## 🗺️ Roadmap de implementação (ordem otimizada)
 
 **Etapa 0 — Dependências em dia (pré-requisito, ~1 h)** ✅ *concluída em 06/08/2026 — ver seção "Etapa 0" acima*
@@ -458,8 +517,8 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 **Fase 1 — Correções de bugs e Quick Wins (½ dia)** ✅ *concluída em 06/08/2026 — ver seção "Fase 1" acima*
 H1 (loading travado) → H4 (dead code) → H3 (extração de utilitários) → M8 + demais Quick Wins (sizes/preload, type=button, sitemap, check 10MB, error.tsx). **Estado final:** H1/H4/H3 resolvidos; M8 e os 5 Quick Wins aplicados e validados; nenhuma mudança estrutural antecipada.
 
-**Fase 2 — Fundações (1–2 dias)**
-H2/H3 (módulo `constants.ts` + tipos compartilhados) → M2 (dropzone controlado + hook `useFileDropzone`) → M1 (seletores + `dragActive` local). *Testes: adicionar Vitest e cobrir `formatBytes`, validadores e utilidades antes das mudanças estruturais.*
+**Fase 2 — Fundações (1–2 dias)** ✅ *concluída em 06/08/2026 — ver seção "Fase 2" acima*
+H2/H3 (módulo `constants.ts` + tipos compartilhados) → M2 (dropzone controlado + hook `useFileDropzone`) → M1 (seletores + `dragActive` local). *Testes: adicionar Vitest e cobrir `formatBytes`, validadores e utilidades antes das mudanças estruturais.* **Estado final:** constantes/tipos/validadores centralizados em `src/lib/constants.ts`, `src/lib/types.ts`, `src/lib/validation.ts`; dropzone controlado via `useFileDropzone`; seletores granulares em todos os widgets; Vitest com 38 testes (M7 parcial).
 
 **Fase 3 — Arquitetura (2–3 dias)**
 M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na rota PDF + `pageCount` correto + `error.tsx`) → M7 (CI: lint + tsc + test + build).

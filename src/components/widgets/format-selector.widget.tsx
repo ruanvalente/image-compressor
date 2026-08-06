@@ -3,12 +3,11 @@
 import { useId } from "react";
 import { useCompressorStore } from "@/lib/store/compressor-store";
 import { Button } from "@/components/ui";
-import type { CompressionSettings } from "@/lib/store/compressor-store";
-
-const formats: CompressionSettings["format"][] = ["jpeg", "png", "webp", "avif"];
+import { COMPRESS_FORMATS } from "@/lib/constants";
 
 export function FormatSelector() {
-  const { settings, setSettings } = useCompressorStore();
+  const format = useCompressorStore((s) => s.settings.format);
+  const setSettings = useCompressorStore((s) => s.setSettings);
   const groupId = useId();
 
   return (
@@ -22,14 +21,14 @@ export function FormatSelector() {
         aria-describedby={`${groupId}-hint`}
         className="flex gap-2"
       >
-        {formats.map((f) => (
+        {COMPRESS_FORMATS.map((f) => (
           <Button
             key={f}
-            variant={settings.format === f ? "primary" : "secondary"}
+            variant={format === f ? "primary" : "secondary"}
             onClick={() => setSettings({ format: f })}
             className="flex-1"
             role="radio"
-            aria-checked={settings.format === f}
+            aria-checked={format === f}
             aria-label={`Formato ${f.toUpperCase()}`}
           >
             {f}

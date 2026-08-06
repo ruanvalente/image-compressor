@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import { usePdfStore, type PdfResult } from "@/lib/store/pdf-store";
+import { usePdfStore } from "@/lib/store/pdf-store";
 import { toast } from "@/lib/utils/toast";
 import { base64ToBlob } from "@/lib/utils/base64";
+import type { PdfResult } from "@/lib/types";
 
 export function usePdfGeneration() {
   const generate = useCallback(async () => {

@@ -2,52 +2,53 @@
 
 import { useCallback } from "react";
 import Image from "next/image";
-import { usePdfStore, type PageSize } from "@/lib/store/pdf-store";
+import { usePdfStore } from "@/lib/store/pdf-store";
 import { usePdfGeneration } from "@/hooks";
 import { Button, Card } from "@/components/ui";
 import { FileDropzone } from "./file-dropzone.widget";
 import { formatBytes } from "@/lib/utils/format-bytes";
 import { toast } from "@/lib/utils/toast";
-
-const MAX_FILES = 20;
-const MAX_FILE_SIZE = 30 * 1024 * 1024;
-const MAX_TOTAL_SIZE = 100 * 1024 * 1024;
-
-const PAGE_SIZE_OPTIONS: { value: PageSize; label: string }[] = [
-  { value: "original", label: "Original" },
-  { value: "a4", label: "A4" },
-  { value: "letter", label: "Carta" },
-];
+import {
+  PAGE_SIZE_OPTIONS,
+  PDF_MAX_FILES,
+  PDF_MAX_FILE_SIZE,
+  PDF_MAX_TOTAL_SIZE,
+} from "@/lib/constants";
 
 export function PdfGenerator() {
-  const {
-    files,
-    previews,
-    pageSize,
-    removeFile,
-    moveFile,
-    setPageSize,
-    reset,
-  } = usePdfStore();
+  const files = usePdfStore((s) => s.files);
+  const previews = usePdfStore((s) => s.previews);
+  const pageSize = usePdfStore((s) => s.pageSize);
+  const removeFile = usePdfStore((s) => s.removeFile);
+  const moveFile = usePdfStore((s) => s.moveFile);
+  const setPageSize = usePdfStore((s) => s.setPageSize);
+  const reset = usePdfStore((s) => s.reset);
   const { generate, isLoading } = usePdfGeneration();
 
   const handleFiles = useCallback((newFiles: File[]) => {
     const store = usePdfStore.getState();
     const currentTotal = store.files.reduce((acc, f) => acc + f.size, 0);
 
-    const oversized = newFiles.filter((f) => f.size > MAX_FILE_SIZE);
+    const oversized = newFiles.filter((f) => f.size > PDF_MAX_FILE_SIZE);
     for (const f of oversized) {
       toast.error("Arquivo muito grande", {
-        description: `${f.name} excede o limite de ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        description: `${f.name} excede o limite de ${PDF_MAX_FILE_SIZE / 1024 / 1024}MB`,
+      });
+    }
+
+    const invalidType = newFiles.filter((f) => !f.type.startsWith("image/"));
+    for (const f of invalidType) {
+      toast.error("Tipo de arquivo inválido", {
+        description: `${f.name} não é uma imagem válida`,
       });
     }
 
     const validFiles = newFiles.filter(
-      (f) => f.size <= MAX_FILE_SIZE && f.type.startsWith("image/"),
+      (f) => f.size <= PDF_MAX_FILE_SIZE && f.type.startsWith("image/"),
     );
 
-    if (store.files.length + validFiles.length > MAX_FILES) {
-      toast.error(`Máximo de ${MAX_FILES} imagens`, {
+    if (store.files.length + validFiles.length > PDF_MAX_FILES) {
+      toast.error(`Máximo de ${PDF_MAX_FILES} imagens`, {
         description: `Remova algumas imagens antes de adicionar mais`,
       });
       return;
@@ -55,8 +56,8 @@ export function PdfGenerator() {
 
     const newTotal =
       currentTotal + validFiles.reduce((acc, f) => acc + f.size, 0);
-    if (newTotal > MAX_TOTAL_SIZE) {
-      toast.error(`Limite de ${MAX_TOTAL_SIZE / 1024 / 1024}MB excedido`, {
+    if (newTotal > PDF_MAX_TOTAL_SIZE) {
+      toast.error(`Limite de ${PDF_MAX_TOTAL_SIZE / 1024 / 1024}MB excedido`, {
         description: `Adicione arquivos menores ou remova alguns existentes`,
       });
       return;
@@ -64,6 +65,7 @@ export function PdfGenerator() {
 
     if (validFiles.length > 0) {
       store.addFiles(validFiles);
+      toast.success(`${validFiles.length} imagem(ns) adicionada(s)`);
     }
   }, []);
 

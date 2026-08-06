@@ -1,13 +1,5 @@
 import { create } from "zustand";
-
-export type PageSize = "original" | "a4" | "letter";
-
-export interface PdfResult {
-  data: string;
-  filename: string;
-  pageCount: number;
-  size: number;
-}
+import type { PageSize, PdfResult } from "@/lib/types";
 
 interface PdfStore {
   files: File[];

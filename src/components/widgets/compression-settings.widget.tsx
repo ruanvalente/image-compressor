@@ -5,7 +5,10 @@ import { formatBytes } from "@/lib/utils/format-bytes";
 import { Button, Card } from "@/components/ui";
 
 export function CompressionSettings() {
-  const { file, setFile, setPreview, setCompressed } = useCompressorStore();
+  const file = useCompressorStore((s) => s.file);
+  const setFile = useCompressorStore((s) => s.setFile);
+  const setPreview = useCompressorStore((s) => s.setPreview);
+  const setCompressed = useCompressorStore((s) => s.setCompressed);
 
   if (!file) return null;
 

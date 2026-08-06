@@ -2,7 +2,7 @@
 
 import { formatBytes } from "@/lib/utils/format-bytes";
 import { Badge, Button, Card } from "@/components/ui";
-import type { CompressionResult } from "@/lib/store/compressor-store";
+import type { CompressionResult } from "@/lib/types";
 
 interface CompressionResultCardProps {
   result: CompressionResult;

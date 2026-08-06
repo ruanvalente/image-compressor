@@ -2,7 +2,7 @@
 
 import { Badge, Button, Card } from "@/components/ui";
 import { formatBytes } from "@/lib/utils/format-bytes";
-import type { PdfResult } from "@/lib/store/pdf-store";
+import type { PdfResult } from "@/lib/types";
 
 interface PdfDownloadCardProps {
   result: PdfResult;

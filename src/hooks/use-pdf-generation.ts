@@ -3,60 +3,51 @@
 import { useCallback } from "react";
 import { usePdfStore, type PdfResult } from "@/lib/store/pdf-store";
 import { toast } from "@/lib/utils/toast";
-
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteChars = atob(base64);
-  const chunks: BlobPart[] = [];
-
-  for (let offset = 0; offset < byteChars.length; offset += 512) {
-    const slice = byteChars.slice(offset, offset + 512);
-    const byteNumbers = new Array<number>(slice.length);
-
-    for (let i = 0; i < slice.length; i++) {
-      byteNumbers[i] = slice.charCodeAt(i);
-    }
-
-    chunks.push(new Uint8Array(byteNumbers));
-  }
-
-  return new Blob(chunks, { type: mimeType });
-}
+import { base64ToBlob } from "@/lib/utils/base64";
 
 export function usePdfGeneration() {
-  const { files, pageSize, setResult, setLoading } = usePdfStore();
-
   const generate = useCallback(async () => {
-    if (files.length === 0) {
+    const store = usePdfStore.getState();
+    if (store.files.length === 0) {
       toast.warning("Nenhuma imagem selecionada", {
         description: "Adicione pelo menos uma imagem para gerar o PDF",
       });
       return;
     }
 
-    setLoading(true);
+    store.setLoading(true);
+    try {
+      const formData = new FormData();
+      store.files.forEach((f) => formData.append("files", f));
+      formData.append("filename", "imagens.pdf");
+      formData.append("pageSize", store.pageSize);
 
-    const formData = new FormData();
-    files.forEach((f) => formData.append("files", f));
-    formData.append("filename", "imagens.pdf");
-    formData.append("pageSize", pageSize);
+      const res = await fetch("/api/pdf", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-    toast.promise(
-      (async () => {
-        const res = await fetch("/api/pdf", {
-          method: "POST",
-          body: formData,
+      if (!res.ok) {
+        throw new Error(data?.error ?? `Falha ao gerar PDF (HTTP ${res.status})`);
+      }
+
+      usePdfStore.getState().setResult(data as PdfResult);
+      toast.success("PDF gerado com sucesso!");
+    } catch (e) {
+      if (e instanceof TypeError) {
+        toast.error("Falha de conexão", {
+          description: "Verifique sua internet e tente novamente",
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao gerar PDF");
-        setResult(data as PdfResult);
-      })(),
-      {
-        loading: "Gerando PDF...",
-        success: "PDF gerado com sucesso!",
-        error: "Falha ao gerar PDF",
-      },
-    );
-  }, [files, pageSize, setResult, setLoading]);
+      } else {
+        toast.error(e instanceof Error ? e.message : "Falha ao gerar PDF");
+      }
+    } finally {
+      usePdfStore.getState().setLoading(false);
+    }
+  }, []);
 
   const download = useCallback(() => {
     const { result } = usePdfStore.getState();

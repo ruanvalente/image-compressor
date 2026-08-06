@@ -20,7 +20,6 @@ interface CompressorStore {
   compressed: CompressionResult | null;
   settings: CompressionSettings;
   loading: boolean;
-  error: string;
   dragActive: boolean;
 
   setFile: (file: File | null) => void;
@@ -28,7 +27,6 @@ interface CompressorStore {
   setCompressed: (result: CompressionResult | null) => void;
   setSettings: (settings: Partial<CompressionSettings>) => void;
   setLoading: (loading: boolean) => void;
-  setError: (error: string) => void;
   setDragActive: (active: boolean) => void;
   reset: () => void;
 }
@@ -44,7 +42,6 @@ export const useCompressorStore = create<CompressorStore>((set) => ({
   compressed: null,
   settings: initialSettings,
   loading: false,
-  error: "",
   dragActive: false,
 
   setFile: (file) => set({ file }),
@@ -55,7 +52,6 @@ export const useCompressorStore = create<CompressorStore>((set) => ({
       settings: { ...state.settings, ...settings },
     })),
   setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error }),
   setDragActive: (dragActive) => set({ dragActive }),
   reset: () =>
     set({
@@ -64,7 +60,6 @@ export const useCompressorStore = create<CompressorStore>((set) => ({
       compressed: null,
       settings: initialSettings,
       loading: false,
-      error: "",
       dragActive: false,
     }),
 }));

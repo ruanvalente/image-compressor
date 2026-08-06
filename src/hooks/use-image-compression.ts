@@ -6,74 +6,68 @@ import {
   type CompressionResult,
 } from "@/lib/store/compressor-store";
 import { toast } from "@/lib/utils/toast";
+import { base64ToBlob } from "@/lib/utils/base64";
 
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteChars = atob(base64);
-  const chunks: BlobPart[] = [];
-
-  for (let offset = 0; offset < byteChars.length; offset += 512) {
-    const slice = byteChars.slice(offset, offset + 512);
-    const byteNumbers = new Array<number>(slice.length);
-
-    for (let i = 0; i < slice.length; i++) {
-      byteNumbers[i] = slice.charCodeAt(i);
-    }
-
-    chunks.push(new Uint8Array(byteNumbers));
-  }
-
-  return new Blob(chunks, { type: mimeType });
-}
+const MIME_TYPES: Record<string, string> = {
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  avif: "image/avif",
+};
 
 export function useImageCompression() {
-  const { file, settings, setCompressed, setLoading } = useCompressorStore();
-
   const compress = useCallback(async () => {
-    if (!file) {
+    const store = useCompressorStore.getState();
+    if (!store.file) {
       toast.warning("Nenhum arquivo selecionado", {
         description: "Selecione uma imagem para comprimir",
       });
       return;
     }
 
-    setLoading(true);
+    store.setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", store.file);
+      formData.append("quality", store.settings.quality.toString());
+      formData.append("format", store.settings.format);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("quality", settings.quality.toString());
-    formData.append("format", settings.format);
+      const res = await fetch("/api/compress", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-    toast.promise(
-      (async () => {
-        const res = await fetch("/api/compress", {
-          method: "POST",
-          body: formData,
+      if (!res.ok) {
+        throw new Error(
+          data?.error ?? `Falha ao comprimir imagem (HTTP ${res.status})`,
+        );
+      }
+
+      useCompressorStore.getState().setCompressed(data as CompressionResult);
+      toast.success("Imagem comprimida com sucesso!");
+    } catch (e) {
+      if (e instanceof TypeError) {
+        toast.error("Falha de conexão", {
+          description: "Verifique sua internet e tente novamente",
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao comprimir");
-        setCompressed(data as CompressionResult);
-      })(),
-      {
-        loading: "Comprimindo imagem...",
-        success: "Imagem comprimida com sucesso!",
-        error: "Falha ao comprimir imagem",
-      },
-    );
-  }, [file, settings, setCompressed, setLoading]);
+      } else {
+        toast.error(
+          e instanceof Error ? e.message : "Falha ao comprimir imagem",
+        );
+      }
+    } finally {
+      useCompressorStore.getState().setLoading(false);
+    }
+  }, []);
 
   const download = useCallback(() => {
     const { compressed } = useCompressorStore.getState();
     if (!compressed) return;
 
-    const mimeType =
-      compressed.format === "jpeg"
-        ? "image/jpeg"
-        : compressed.format === "png"
-          ? "image/png"
-          : compressed.format === "webp"
-            ? "image/webp"
-            : "image/avif";
-
+    const mimeType = MIME_TYPES[compressed.format] ?? "application/octet-stream";
     const blob = base64ToBlob(compressed.data, mimeType);
     const url = URL.createObjectURL(blob);
 

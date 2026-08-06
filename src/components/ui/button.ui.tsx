@@ -20,10 +20,11 @@ const sizeStyles = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "primary", size = "md", className = "", disabled, children, ...props }, ref) => {
+  ({ variant = "primary", size = "md", className = "", disabled, children, type = "button", ...props }, ref) => {
     return (
       <button
         ref={ref}
+        type={type}
         disabled={disabled}
         className={`
           rounded-lg font-medium transition-colors

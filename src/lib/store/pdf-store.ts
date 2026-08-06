@@ -14,7 +14,6 @@ interface PdfStore {
   previews: string[];
   result: PdfResult | null;
   loading: boolean;
-  error: string;
   pageSize: PageSize;
 
   addFiles: (files: File[]) => void;
@@ -22,7 +21,6 @@ interface PdfStore {
   moveFile: (from: number, to: number) => void;
   setResult: (result: PdfResult | null) => void;
   setLoading: (loading: boolean) => void;
-  setError: (error: string) => void;
   setPageSize: (size: PageSize) => void;
   reset: () => void;
 }
@@ -32,7 +30,6 @@ export const usePdfStore = create<PdfStore>((set) => ({
   previews: [],
   result: null,
   loading: false,
-  error: "",
   pageSize: "original",
 
   addFiles: (newFiles) =>
@@ -77,7 +74,6 @@ export const usePdfStore = create<PdfStore>((set) => ({
 
   setResult: (result) => set({ result }),
   setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error }),
   setPageSize: (pageSize) => set({ pageSize, result: null }),
   reset: () => {
     set((state) => {
@@ -87,7 +83,6 @@ export const usePdfStore = create<PdfStore>((set) => ({
         previews: [],
         result: null,
         loading: false,
-        error: "",
         pageSize: "original",
       };
     });

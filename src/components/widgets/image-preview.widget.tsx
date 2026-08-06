@@ -20,7 +20,7 @@ export function ImagePreview({ src, alt, emptyMessage = "Resultado aparecerá aq
 
   return (
     <Card className="relative h-64 overflow-hidden">
-      <Image src={src} alt={alt} fill className="object-contain p-4" />
+      <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-contain p-4" />
     </Card>
   );
 }

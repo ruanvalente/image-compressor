@@ -1,5 +1,6 @@
 import {
   ALLOWED_MIME_TYPES,
+  AVIF_BRANDS,
   COMPRESS_FORMATS,
   IMAGE_SIGNATURES,
   MAX_COMPRESS_FILE_SIZE,
@@ -20,10 +21,62 @@ export class ValidationError extends Error {
   }
 }
 
+function invalidContentError(): ValidationError {
+  return new ValidationError(
+    "Arquivo inválido. O conteúdo não corresponde a uma imagem válida",
+  );
+}
+
+function validateAvifSignature(buffer: Uint8Array): void {
+  const ftyp = [0x66, 0x74, 0x79, 0x70];
+  if (
+    buffer.length < 12 ||
+    ftyp.some((byte, i) => buffer[i + 4] !== byte)
+  ) {
+    throw invalidContentError();
+  }
+
+  const brand = String.fromCharCode(
+    buffer[8],
+    buffer[9],
+    buffer[10],
+    buffer[11],
+  ) as (typeof AVIF_BRANDS)[number];
+
+  if (!AVIF_BRANDS.includes(brand)) {
+    throw invalidContentError();
+  }
+}
+
+function validateWebpSignature(buffer: Uint8Array): void {
+  const riff = [0x52, 0x49, 0x46, 0x46];
+  const webp = [0x57, 0x45, 0x42, 0x50];
+  const matches = (bytes: number[], offset: number) =>
+    bytes.some((byte, i) => buffer[i + offset] !== byte);
+
+  if (
+    buffer.length < 12 ||
+    matches(riff, 0) ||
+    matches(webp, 8)
+  ) {
+    throw invalidContentError();
+  }
+}
+
 export function validateFileSignature(
   buffer: Uint8Array,
   mimeType: string,
 ): void {
+  if (mimeType === "image/avif") {
+    validateAvifSignature(buffer);
+    return;
+  }
+
+  if (mimeType === "image/webp") {
+    validateWebpSignature(buffer);
+    return;
+  }
+
   const signature = IMAGE_SIGNATURES[mimeType];
   if (!signature) {
     throw new ValidationError("Tipo de arquivo não suportado");
@@ -31,10 +84,22 @@ export function validateFileSignature(
 
   for (let i = 0; i < signature.length; i++) {
     if (buffer[i] !== signature[i]) {
-      throw new ValidationError(
-        "Arquivo inválido. O conteúdo não corresponde a uma imagem válida",
-      );
+      throw invalidContentError();
     }
+  }
+}
+
+export function validatePdfFileSignature(
+  buffer: Uint8Array,
+  file: File,
+): void {
+  try {
+    validateFileSignature(buffer, file.type);
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      throw new ValidationError(`${file.name}: ${error.message}`);
+    }
+    throw error;
   }
 }
 

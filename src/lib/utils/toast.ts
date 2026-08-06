@@ -1,7 +1,5 @@
 import { toast as sonnerToast } from "sonner";
 
-export type ToastType = "success" | "error" | "info" | "warning";
-
 interface ToastOptions {
   description?: string;
   duration?: number;
@@ -19,13 +17,6 @@ export const toast = {
 
   error: (message: string, options?: ToastOptions) => {
     sonnerToast.error(message, {
-      description: options?.description,
-      duration: options?.duration ?? defaultDuration,
-    });
-  },
-
-  info: (message: string, options?: ToastOptions) => {
-    sonnerToast.info(message, {
       description: options?.description,
       duration: options?.duration ?? defaultDuration,
     });

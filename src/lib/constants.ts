@@ -23,16 +23,18 @@ export const PDF_MAX_TOTAL_SIZE = 100 * 1024 * 1024;
 export const IMAGE_SIGNATURES: Record<string, readonly number[]> = {
   "image/jpeg": [0xff, 0xd8, 0xff],
   "image/png": [0x89, 0x50, 0x4e, 0x47],
-  "image/webp": [0x57, 0x45, 0x42, 0x50],
   "image/gif": [0x47, 0x49, 0x46],
-  "image/avif": [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70],
 };
 
-export const ALLOWED_MIME_TYPES = Object.keys(IMAGE_SIGNATURES);
+export const AVIF_BRANDS = ["avif", "avis", "mif1"] as const;
 
-export const PDF_ALLOWED_TYPES: readonly string[] = Object.keys(
-  IMAGE_SIGNATURES,
-);
+export const ALLOWED_MIME_TYPES: readonly string[] = [
+  ...Object.keys(IMAGE_SIGNATURES),
+  "image/webp",
+  "image/avif",
+];
+
+export const PDF_ALLOWED_TYPES: readonly string[] = ALLOWED_MIME_TYPES;
 
 export const PAGE_SIZE_OPTIONS = [
   { value: "original", label: "Original" },

@@ -3,7 +3,11 @@ import sharp from "sharp";
 import { PDFDocument } from "pdf-lib";
 import { PAGE_SIZE_PT } from "@/lib/constants";
 import { sanitizeFilename } from "@/lib/utils/filename";
-import { ValidationError, validatePdfFiles } from "@/lib/validation";
+import {
+  ValidationError,
+  validatePdfFileSignature,
+  validatePdfFiles,
+} from "@/lib/validation";
 import type { PageSize } from "@/lib/types";
 
 class PdfError extends Error {
@@ -77,10 +81,22 @@ export async function POST(request: NextRequest) {
 
     const pdfDoc = await PDFDocument.create();
     const targetSize = pageSize !== "original" ? PAGE_SIZE_PT[pageSize] : null;
+    let pageCount = 0;
 
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      const metadata = await sharp(buffer).metadata();
+
+      validatePdfFileSignature(buffer, file);
+
+      let metadata;
+      try {
+        metadata = await sharp(buffer).metadata();
+      } catch {
+        throw new PdfError(
+          `Não foi possível ler a imagem "${file.name}". O arquivo pode estar corrompido`,
+        );
+      }
+
       const imgWidth = metadata.width ?? 0;
       const imgHeight = metadata.height ?? 0;
 
@@ -88,7 +104,14 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const image = await embedImage(pdfDoc, buffer, file.type);
+      let image;
+      try {
+        image = await embedImage(pdfDoc, buffer, file.type);
+      } catch {
+        throw new PdfError(
+          `Não foi possível processar a imagem "${file.name}". O arquivo pode estar corrompido`,
+        );
+      }
 
       if (targetSize) {
         const [pw, ph] = targetSize;
@@ -109,6 +132,8 @@ export async function POST(request: NextRequest) {
           height: imgHeight,
         });
       }
+
+      pageCount += 1;
     }
 
     const pdfBytes = await pdfDoc.save();
@@ -117,7 +142,7 @@ export async function POST(request: NextRequest) {
       {
         data: Buffer.from(pdfBytes).toString("base64"),
         filename: sanitizeFilename(filename, "pdf"),
-        pageCount: files.length,
+        pageCount,
         size: pdfBytes.length,
       },
       {

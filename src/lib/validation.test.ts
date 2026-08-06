@@ -4,6 +4,7 @@ import {
   parseCompressOptions,
   validateCompressFile,
   validateFileSignature,
+  validatePdfFileSignature,
   validatePdfFiles,
 } from "./validation";
 
@@ -37,6 +38,105 @@ describe("validateFileSignature", () => {
     expect(() =>
       validateFileSignature(new Uint8Array([0x41, 0x42]), "application/pdf"),
     ).toThrow("Tipo de arquivo não suportado");
+  });
+
+  it("accepts an AVIF with a 24-byte ftyp box (brand avif)", () => {
+    const buffer = new Uint8Array([
+      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66,
+      0x00, 0x00, 0x00, 0x00, 0x61, 0x76, 0x69, 0x66,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/avif")).not.toThrow();
+  });
+
+  it("accepts an AVIF with a 32-byte ftyp box (brand avif)", () => {
+    const buffer = new Uint8Array([
+      0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66,
+      0x00, 0x00, 0x00, 0x00, 0x61, 0x76, 0x69, 0x66, 0x61, 0x76, 0x69, 0x73,
+      0x6d, 0x69, 0x66, 0x31, 0x6d, 0x69, 0x66, 0x31,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/avif")).not.toThrow();
+  });
+
+  it("accepts AVIF brands avis and mif1", () => {
+    const avis = new Uint8Array([
+      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x73,
+      0x00, 0x00, 0x00, 0x00,
+    ]);
+    const mif1 = new Uint8Array([
+      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31,
+      0x00, 0x00, 0x00, 0x00,
+    ]);
+    expect(() => validateFileSignature(avis, "image/avif")).not.toThrow();
+    expect(() => validateFileSignature(mif1, "image/avif")).not.toThrow();
+  });
+
+  it("accepts a valid WebP (RIFF container with WEBP at bytes 8-11)", () => {
+    const buffer = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x1c, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+      0x56, 0x50, 0x38,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/webp")).not.toThrow();
+  });
+
+  it("rejects a WebP missing the WEBP marker", () => {
+    const buffer = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x1c, 0x00, 0x00, 0x00, 0x78, 0x78, 0x78, 0x78,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/webp")).toThrow(
+      "não corresponde a uma imagem válida",
+    );
+  });
+
+  it("rejects a WebP without the RIFF header", () => {
+    const buffer = new Uint8Array([
+      0x57, 0x45, 0x42, 0x50, 0x1c, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/webp")).toThrow(
+      "não corresponde a uma imagem válida",
+    );
+  });
+
+  it("rejects an AVIF without an ftyp box", () => {
+    const buffer = new Uint8Array([0x00, 0x11, 0x22, 0x33, 0x00, 0x00, 0x00, 0x01]);
+    expect(() => validateFileSignature(buffer, "image/avif")).toThrow(
+      "não corresponde a uma imagem válida",
+    );
+  });
+
+  it("rejects an AVIF with an unknown ftyp brand", () => {
+    const buffer = new Uint8Array([
+      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x78, 0x78, 0x66, 0x66,
+      0x00, 0x00, 0x00, 0x00,
+    ]);
+    expect(() => validateFileSignature(buffer, "image/avif")).toThrow(
+      "não corresponde a uma imagem válida",
+    );
+  });
+});
+
+describe("validatePdfFileSignature", () => {
+  it("accepts a valid file", () => {
+    const file = fileOf("foto.png", 1000, "image/png");
+    expect(() =>
+      validatePdfFileSignature(
+        new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d]),
+        file,
+      ),
+    ).not.toThrow();
+  });
+
+  it("includes the file name when content does not match", () => {
+    const file = fileOf("foto.png", 1000, "image/png");
+    expect(() =>
+      validatePdfFileSignature(new Uint8Array([0x00, 0x11, 0x22, 0x33]), file),
+    ).toThrow("foto.png");
+  });
+
+  it("includes the file name for unsupported MIME types", () => {
+    const file = fileOf("doc.txt", 1000, "text/plain");
+    expect(() =>
+      validatePdfFileSignature(new Uint8Array([0x41, 0x42]), file),
+    ).toThrow("doc.txt: Tipo de arquivo não suportado");
   });
 });
 

@@ -26,6 +26,7 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
       className="mb-6 flex overflow-hidden rounded-lg border border-zinc-300"
     >
       <button
+        type="button"
         role="tab"
         aria-selected={mode === "compress"}
         onClick={() => onChange("compress")}
@@ -38,6 +39,7 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
         Compressor
       </button>
       <button
+        type="button"
         role="tab"
         aria-selected={mode === "pdf"}
         onClick={() => onChange("pdf")}

@@ -10,6 +10,9 @@ interface FileDropzoneProps {
   onFiles?: (files: File[]) => void;
 }
 
+// TODO(Fase 2 - H2): centralizar em src/lib/constants.ts, espelhando api/compress/route.ts
+const MAX_COMPRESS_FILE_SIZE = 10 * 1024 * 1024;
+
 export function FileDropzone({ multiple = false, onFiles }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hintId = useId();
@@ -46,6 +49,12 @@ export function FileDropzone({ multiple = false, onFiles }: FileDropzoneProps) {
         toast.error("Tipo de arquivo inválido", {
           description:
             "Por favor, envie apenas imagens (JPEG, PNG, WebP, etc.)",
+        });
+        return;
+      }
+      if (file.size > MAX_COMPRESS_FILE_SIZE) {
+        toast.error("Arquivo muito grande", {
+          description: `Limite de ${MAX_COMPRESS_FILE_SIZE / 1024 / 1024}MB para compressão`,
         });
         return;
       }
@@ -141,8 +150,9 @@ export function FileDropzone({ multiple = false, onFiles }: FileDropzoneProps) {
           src={preview}
           alt="Prévia da imagem selecionada"
           fill
+          sizes="(max-width: 1024px) 100vw, 50vw"
           className="object-contain p-4"
-          priority
+          preload
         />
       ) : (
         <div className="text-center text-zinc-500">

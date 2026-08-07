@@ -753,6 +753,63 @@ Fechamento dos resíduos: majors TS 7 / ESLint 10 reavaliados com upgrade real (
 
 ### Próximos passos (Fase 2 — Application Shell)
 
-1. Refatorar header e footer inline do `layout.tsx` para `components/layout/Header.tsx` / `Footer.tsx`.
+1. Refatorar header e footer inline do `layout.tsx` para `components/layout/header.tsx` / `footer.tsx`.
 2. Migrar os containers duplicados (`page.tsx`, `layout.tsx`, `error.tsx`) para `.container-app`.
 3. Melhorar o ritmo vertical global (espaçamento entre header/main/footer).
+
+---
+
+## 2️⃣ Fase 2 — Application Shell (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 2): refatorar header, refatorar main container, refatorar footer e melhorar o ritmo vertical global. Migrar o shell inteiro para os tokens semânticos e `.container-app` da Fase 1. Sem mudança estrutural em widgets (Fase 3).
+
+### ✅ Execução
+
+| Item | Situação | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **Header extraído** | Header inline no `layout.tsx`: emoji 🖼️, cores hardcoded `zinc-*`, container duplicado `max-w-4xl px-4` | Novo `components/layout/header.tsx` (**Server Component**): ícone de imagem SVG substituindo o emoji, tile arredondado `bg-primary text-primary-foreground`, título `text-lg sm:text-xl` (tracking-tight) + subtítulo `text-sm`, tokens semânticos (`border-border`, `bg-surface`, `text-text`, `text-text-muted`) e `container-app` | `src/components/layout/header.tsx` (novo) |
+| **Footer extraído** | Footer inline no `layout.tsx` com `role="contentinfo"` redundante e cores hardcoded | Novo `components/layout/footer.tsx` (**Server Component**): autor + redes sociais com `aria-label` acessíveis (mantidos), ícones `h-5 w-5` consistentes, foco `focus-visible:ring-focus`, tokens semânticos e empilhamento responsivo `flex-col ... sm:flex-row sm:justify-between` | `src/components/layout/footer.tsx` (novo) |
+| **Barrel `layout`** | — | `components/layout/index.ts` exportando `Header`/`Footer` (padrão de barrel da codebase) | `src/components/layout/index.ts` (novo) |
+| **`layout.tsx` enxuto** | 4 componentes inline + constantes de links no root layout | Restam apenas metadata, fonts, `SkipLink`, `Toaster` e imports de `Header`/`Footer` — **−135 linhas** | `src/app/layout.tsx` |
+| **Containers unificados** | `page.tsx`, `error.tsx` e `loading.tsx` duplicavam `mx-auto max-w-4xl px-4` | Todos passam a usar `.container-app` (padding inline 1rem → 1.5rem em sm+, max-width 56rem via `--container-max`) | `page.tsx`, `error.tsx`, `loading.tsx` |
+| **Ritmo vertical global** | `page.tsx` com `py-8` fixo; `loading.tsx` **sem padding** (skeleton colava no header) | Padrão de ritmo `py-6 sm:py-10` no conteúdo do `main` (mobile mais compacto, desktop mais respirável); header `py-4` e footer `py-6` preservados (shell leve) | `page.tsx`, `loading.tsx` |
+| **Tokens no shell restante** | `SkipLink` e skeleton do loading com cores hardcoded (`bg-blue-600`, `bg-zinc-100`) | SkipLink: `bg-primary`/`text-primary-foreground`/`ring-focus`; skeleton: `border-border`/`bg-surface-muted` | `layout.tsx`, `loading.tsx` |
+
+### 📌 Notas e decisões
+
+1. **Header/Footer são Server Components** — nenhum JS de cliente adicionado ao shell; princípios RSC do Next.js preservados.
+2. **Emoji → SVG:** o `🖼️` do header foi substituído por um ícone de imagem inline (`aria-hidden`, herda `currentColor`). Emoji varia por sistema operacional e não acompanha cor; o SVG fica consistente sobre o tile `bg-primary`.
+3. **Paleta 1:1 preservada (zero mudança visual):** `text-text` = antigo `text-zinc-900`; `text-text-muted` = `text-zinc-600`; `border-border` = `border-zinc-200`; `bg-surface` = `bg-white`; `text-primary` = `text-blue-600`; `hover:text-primary-hover` = `hover:text-blue-700`; `ring-focus` = `ring-blue-500`.
+4. **`focus-visible` no lugar de `focus`:** links do autor e das redes sociais exibem o anel de foco **apenas na navegação por teclado** (mouse não mostra ring) — convenção registrada na Fase 1 + WCAG 2.4.7. O `SkipLink` mantém `focus:` porque só existe no estado de foco.
+5. **`role="contentinfo"` removido:** `<footer>` em escopo raiz já tem papel implícito `contentinfo`; o atributo era redundante.
+6. **Padding do container muda sutilmente:** `page.tsx` migrou de `px-4` fixo para `.container-app` (1rem mobile → **1.5rem em ≥40rem**). Largura máxima preservada (56rem = `max-w-4xl`). Respiro lateral ligeiramente maior em telas médias — intencional e alinhado ao sistema.
+7. **`loading.tsx` corrigido (bonus de consistência):** o skeleton estava sem padding e colava no header; agora usa `.container-app py-6 sm:py-10` (mesmo ritmo da página) e cores semânticas.
+8. **Nenhuma mudança funcional:** business logic, APIs, widgets, stores e toasts intocados — escopo das Fases 3–4 do UI-PLAN.
+
+### 🔍 Verificação pós-build
+
+- **Utilities semânticas emitidas no CSS final** (`@theme inline`): `bg-surface`, `text-text-muted`, `border-border`, `bg-primary`, `ring-focus` (→ `var(--focus)`) e `.container-app` com `padding-inline: 1rem`/`1.5rem` e `max-width: var(--container-max)`.
+- **HTML servido:** `<header class="border-b border-border bg-surface">` com ícone SVG, título e subtítulo; `<footer>` com os 3 links sociais e `aria-label` acessíveis; **nenhum emoji 🖼️** restante no header.
+- Fonte Geist aplicada (herdada da Fase 1).
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — header/footer com tokens semânticos, `container-app`, ícone SVG, sem emoji |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}` |
+| `POST /api/pdf` (1 imagem, A4, "relatorio final") | ✅ 200 — `pageCount: 1`, `relatorio_final.pdf` |
+
+**Resumo:** shell refatorado e desacoplado — Header/Footer extraídos para `components/layout/` como Server Components (‑135 linhas no `layout.tsx`), containers unificados em `.container-app`, ritmo vertical padronizado (`py-6 sm:py-10`) e todo o shell migrado para os tokens semânticos da Fase 1 com paleta preservada 1:1. Nenhuma regressão funcional. **Fase 2 concluída — base pronta para a Fase 3 (Core Workspace).**
+
+### Próximos passos (Fase 3 — Core Workspace)
+
+1. Redesenhar o mode switcher (`ToolSwitcher`) — estados ativo/hover/foco, touch targets e acessibilidade.
+2. Redesenhar o dropzone de upload (`FileDropzone`) — empty/drag/hover/selected/error.
+3. Redesenhar o painel de resultado (`CompressionResultCard`/`ImagePreview`) — empty state significativo.
+4. Migrar os widgets do workspace para os tokens semânticos e `.container-app`.
+5. Melhorar o layout desktop/mobile do workspace (duas colunas ↔ coluna única).

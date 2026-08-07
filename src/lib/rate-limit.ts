@@ -32,6 +32,10 @@ export function createRateLimiter(
       throw new RateLimitExceeded(retryAfter);
     }
 
+    if (timestamps.length === 0) {
+      buckets.delete(ip);
+    }
+
     timestamps.push(now);
     buckets.set(ip, { timestamps });
   };

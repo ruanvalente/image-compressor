@@ -659,7 +659,7 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 ### 🔍 Revisão de código (resultado)
 
 - Revisão automatizada sobre o diff. **BLOCKER: nenhum.** Confirmações: `RateLimitExceeded` tratado antes de `ValidationError`/`PdfError` nas duas rotas (429 com `Retry-After` não é mascarado); contador de drag com `Math.max(0, …)` evita estado negativo; testes do limiter determinísticos (fake timers + janela real); pin do TS e range `^9` do ESLint coerentes com as decisões; nenhuma referência órfã a `@types/node@20`/`.nvmrc` 20.
-- Ajustes aplicados pós-revisão: nenhum além do relatado (a revisão formal final é do usuário).
+- Ajustes aplicados pós-revisão: limpeza do bucket na poda de timestamps em `createRateLimiter` — quando a lista zera após o filtro de janela, a entrada é removida do Map (evita manter buckets vazios; libera a entrada quando expira). A revisão formal final é do usuário.
 
 ### 🧪 Validação (regressão manual + checks estáticos)
 

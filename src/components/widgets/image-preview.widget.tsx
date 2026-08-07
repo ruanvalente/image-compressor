@@ -1,26 +1,40 @@
 "use client";
 
 import Image from "next/image";
-import { Card } from "@/components/ui";
+import { EmptyState, ImageIcon } from "@/components/ui";
 
 interface ImagePreviewProps {
   src: string;
   alt: string;
-  emptyMessage?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
-export function ImagePreview({ src, alt, emptyMessage = "Resultado aparecerá aqui" }: ImagePreviewProps) {
+export function ImagePreview({
+  src,
+  alt,
+  emptyTitle = "Seu resultado aparecerá aqui",
+  emptyDescription = "Envie uma imagem e inicie a compressão para ver o resultado.",
+}: ImagePreviewProps) {
   if (!src) {
     return (
-      <Card variant="dashed" className="flex h-64 items-center justify-center">
-        <p className="text-zinc-500">{emptyMessage}</p>
-      </Card>
+      <EmptyState
+        icon={<ImageIcon className="h-6 w-6" />}
+        title={emptyTitle}
+        description={emptyDescription}
+      />
     );
   }
 
   return (
-    <Card className="relative h-64 overflow-hidden">
-      <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-contain p-4" />
-    </Card>
+    <div className="relative h-56 overflow-hidden rounded-xl border border-border bg-surface sm:h-64">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 1024px) 100vw, 50vw"
+        className="object-contain p-4"
+      />
+    </div>
   );
 }

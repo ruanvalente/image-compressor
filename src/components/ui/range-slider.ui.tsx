@@ -17,11 +17,13 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-2 block text-sm font-medium text-zinc-800"
+            className="mb-2 flex items-center justify-between text-sm font-medium text-text"
           >
-            {label}
+            <span>{label}</span>
             {showValue && value !== undefined && (
-              <span className="ml-1 text-zinc-600">({displayValue})</span>
+              <span className="rounded-md bg-primary-muted px-2 py-0.5 font-semibold text-primary-strong">
+                {displayValue}
+              </span>
             )}
           </label>
         )}
@@ -30,7 +32,7 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
           id={inputId}
           type="range"
           value={value}
-          className={`w-full accent-blue-600 ${className}`}
+          className={`w-full accent-primary ${className}`}
           {...props}
           aria-label={label ? undefined : props["aria-label"]}
           aria-valuemin={Number(props.min || 0)}

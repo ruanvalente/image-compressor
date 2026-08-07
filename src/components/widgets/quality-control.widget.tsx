@@ -1,7 +1,7 @@
 "use client";
 
 import { useCompressorStore } from "@/lib/store/compressor-store";
-import { Card, RangeSlider } from "@/components/ui";
+import { RangeSlider } from "@/components/ui";
 
 export function QualityControl() {
   const quality = useCompressorStore((s) => s.settings.quality);
@@ -11,7 +11,7 @@ export function QualityControl() {
   const isPng = format === "png";
 
   return (
-    <Card>
+    <div>
       <RangeSlider
         label="Qualidade"
         min={10}
@@ -21,10 +21,10 @@ export function QualityControl() {
         valueFormat={(v) => `${v}%`}
       />
       {isPng && (
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-text-subtle">
           A qualidade não se aplica a PNG — a compressão é sem perdas.
         </p>
       )}
-    </Card>
+    </div>
   );
 }

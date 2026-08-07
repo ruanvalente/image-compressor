@@ -806,10 +806,64 @@ Fechamento dos resíduos: majors TS 7 / ESLint 10 reavaliados com upgrade real (
 
 **Resumo:** shell refatorado e desacoplado — Header/Footer extraídos para `components/layout/` como Server Components (‑135 linhas no `layout.tsx`), containers unificados em `.container-app`, ritmo vertical padronizado (`py-6 sm:py-10`) e todo o shell migrado para os tokens semânticos da Fase 1 com paleta preservada 1:1. Nenhuma regressão funcional. **Fase 2 concluída — base pronta para a Fase 3 (Core Workspace).**
 
-### Próximos passos (Fase 3 — Core Workspace)
+---
 
-1. Redesenhar o mode switcher (`ToolSwitcher`) — estados ativo/hover/foco, touch targets e acessibilidade.
-2. Redesenhar o dropzone de upload (`FileDropzone`) — empty/drag/hover/selected/error.
-3. Redesenhar o painel de resultado (`CompressionResultCard`/`ImagePreview`) — empty state significativo.
-4. Migrar os widgets do workspace para os tokens semânticos e `.container-app`.
-5. Melhorar o layout desktop/mobile do workspace (duas colunas ↔ coluna única).
+## 3️⃣ Fase 3 — Core Workspace (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 3): redesenhar o mode switcher, o dropzone, o painel de resultado, migrar os widgets do workspace para os tokens semânticos e melhorar o layout desktop/mobile (duas colunas ↔ coluna única). Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Execução
+
+| Item | Situação | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **Mode switcher** | Botões `Compressor/PDF` com `border-zinc-300`, ativo `bg-blue-600` bruto; foco `focus:ring` (mostra anel no clique do mouse) | **Segmented control** moderno: track `rounded-xl border border-border bg-surface-muted p-1 gap-1`, botões `rounded-lg` com `flex-1`; ativo `bg-primary text-primary-foreground shadow-sm`, inativo `text-text-muted hover:bg-surface hover:text-text`; foco **só por teclado** `focus-visible:ring-2 ring-focus ring-offset-1`; `aria-pressed` e `fieldset/legend sr-only` preservados; touch targets `py-2.5` mantidos | `tool-switcher.widget.tsx` |
+| **FileDropzone** | Emoji 📁, cores `zinc-*`, sem estado de erro inline, hover só na borda | Redesign completo: ícone de upload SVG em tile `bg-primary-muted text-primary` (hover → `bg-primary text-primary-foreground`), hierarquia vazio ("Arraste uma imagem aqui" / "ou clique para selecionar" / hint de formatos `JPG • PNG • WEBP • AVIF`), estados **drag** (`border-primary bg-primary-muted`), **hover** (mesmo tratamento do drag), **selected** (preview com overlay "Trocar imagem" no hover/foco) e **error** (nova prop `error`, ícone X + mensagem inline com `role="alert"` + `aria-describedby`). Emoji removido | `file-dropzone.widget.tsx` |
+| **Painel de resultado** | Empty state genérico "Resultado aparecerá aqui"; stats sem badge de formato; `div`s semânticos | Novo componente genérico **`EmptyState`** (ícone + título + descrição) reutilizado no compressor e no PDF; `ImagePreview` com container `border border-border`; `CompressionResultCard` com **badge do formato de saída**, **`dl/dt/dd`** semânticos, cores semânticas e botão de download com ícone; `PdfDownloadCard` com ícone de documento, filename truncado, stats `dl` e botão com ícone | `empty-state.ui.tsx` (novo), `image-preview.widget.tsx`, `compression-result-card.widget.tsx`, `pdf-download-card.widget.tsx` |
+| **Layout desktop/mobile** | Settings (arquivo/qualidade/formato) e CTA dentro da coluna esquerda; resultado por último no mobile | Estrutura do `UI-PLAN.md §2`: **Workspace** (upload \| resultado, `grid gap-6 lg:grid-cols-2 lg:items-start`) → **Card de settings** (`space-y-5` com arquivo+qualidade+formato) → **CTA full-width** `size="lg"`. No mobile a ordem vira upload → resultado → settings → ação (conceito do plano); no desktop, resultado sempre visível ao lado do upload | `compress-mode.widget.tsx` |
+| **Widgets de settings** | `CompressionSettings`/`QualityControl` renderizavam cada um seu próprio `Card` | Passaram a ser **conteúdo** (sem wrapper); o `Card` de settings é composto no `CompressMode` — um único bloco coeso com dividers (`border-b border-border` no arquivo) | `compression-settings.widget.tsx`, `quality-control.widget.tsx`, `compress-mode.widget.tsx` |
+| **Modo PDF** | `PdfMode` era um wrapper de layout; settings e botão dentro da coluna; botões de reordenar/remover **invisíveis em touch** (hover-only) | `PdfGenerator` virou **layout owner** (mesma estrutura do compressor: workspace → settings → CTA); `pdf-mode.widget.tsx` **removido**; `dynamic()` no `ToolSwitcher` aponta para `PdfGenerator`; botões dos thumbnails agora sempre visíveis no mobile (`lg:opacity-0 lg:group-hover:opacity-100` + `focus-within`), antes impossíveis de acionar em telas touch | `pdf-generator.widget.tsx`, `pdf-mode.widget.tsx` (deletado), `tool-switcher.widget.tsx` |
+| **Primitivos de UI → tokens** | `Card`/`Button`/`Badge`/`RadioGroup`/`RangeSlider` com `zinc-*`/`blue-*`/`green-*` hardcoded e **sem foco visível** no Button | `Card`: `border border-border bg-surface shadow-sm` (superfícies do UI-PLAN §10); `Button`: variantes semânticas (`bg-primary hover:bg-primary-hover active:bg-primary-active`, `bg-success`, `text-error`, etc.), `inline-flex items-center justify-center gap-2`, **`focus-visible:ring-focus`** e `disabled:opacity-50`; `Badge`: tokens com `-strong` (mesma cor de antes); `RadioGroup`: chips `border bg-surface` com seleção `bg-primary`; `RangeSlider`: `accent-primary` e valor em badge `bg-primary-muted text-primary-strong` | `card.ui.tsx`, `button.ui.tsx`, `badge.ui.tsx`, `radio-group.ui.tsx`, `range-slider.ui.tsx` |
+| **Tokens novos** | Faltavam cores "fortes" para contraste em badges/textos | `--primary-strong` (#1e40af = blue-800), `--success-strong` (#166534 = green-800), `--error-strong` (#991b1b = red-800) + mapeamento no `@theme inline` — cores idênticas às usadas antes, agora com nomes semânticos | `globals.css` |
+| **Ícones compartilhados** | SVGs inline duplicados nos widgets; emojis no dropzone | Novo `icons.ui.tsx` (Upload, Download, Image, Document, Check, X, ChevronUp/Down) — SVG stroke `currentColor`, `aria-hidden` — exportados pelo barrel `ui` | `icons.ui.tsx` (novo), `ui/index.ts` |
+
+### 📌 Notas e decisões
+
+1. **Layout segue o conceito do plano (§2):** Workspace (upload \| resultado) → Compression Settings → Primary Action. No mobile a ordem é exatamente upload → resultado → quality → format → ação; no desktop, resultado fica fixo ao lado do upload com `lg:items-start` (as alturas casam porque dropzone e empty state usam o mesmo `h-56 sm:h-64`).
+2. **Emoji → SVG em todo o workspace:** 📁 (dropzone) e 📄 (PDF) foram substituídos por ícones em `icons.ui.tsx`. Emoji varia por OS e não acompanha cor; SVG herda `currentColor` e fica consistente sobre os tiles coloridos.
+3. **`EmptyState` genérico:** ícone em tile `bg-surface-muted`, título `font-medium`, descrição `text-sm text-text-muted`. Reutilizado em dois pontos (compressor e PDF) com alturas iguais às do dropzone — coluna de resultado nunca "quebra" o grid.
+4. **Erro inline no dropzone:** prop `error` opcional; além do toast, exibe mensagem inline com `role="alert"` (anuncia em SR) e `aria-describedby` ligando o hint ao erro. O estado é limpo ao selecionar um arquivo válido. `aria-invalid` no container foi descartado (role button não suporta — warning do eslint jsx-a11y).
+5. **Foco por teclado em todo o workspace:** `focus-visible` (não `focus`) em todos os controles interativos — anel azul `ring-focus` só aparece na navegação por teclado (WCAG 2.4.7), convenção da Fase 1. O `Button` não tinha foco visível antes; agora tem.
+6. **Botões dos thumbnails do PDF corrigidos para touch:** o antigo `opacity-0 group-hover:opacity-100` tornava os botões de mover/remover **inacessíveis em telas touch** (não existe hover). Agora `lg:opacity-0 lg:group-hover:opacity-100` + `focus-within:opacity-100` — visíveis no mobile, hover-only no desktop. Melhoria de usabilidade mobile exigida pelo plano.
+7. **`PdfMode` removido:** era um wrapper que só compunha layout; a responsabilidade foi absorvida pelo `PdfGenerator` (que agora é o layout owner do modo PDF, espelhando o `CompressMode`). O `dynamic()` do `ToolSwitcher` aponta para `PdfGenerator` — o lazy loading do chunk do PDF é preservado.
+8. **Tokens `-strong` novos (derivados da paleta):** `blue-800`/`green-800`/`red-800` eram usados como texto de badges; viraram `--primary-strong`/`--success-strong`/`--error-strong`. Zero mudança de cor — apenas semântica. O `Badge` default ganhou `border border-border` para funcionar sobre superfícies.
+9. **`Card` agora tem borda:** `border border-border bg-surface shadow-sm` (antes só `bg-white shadow-sm`). Mudança visual sutil e intencional (UI-PLAN §10: `rounded-xl border bg-white shadow-sm`), aplicada ao sistema inteiro.
+10. **Paleta 1:1 preservada:** todas as cores migraram para os tokens equivalentes da Fase 1 (ex.: `text-zinc-900`→`text-text`, `text-zinc-600`→`text-text-muted`, `text-green-700`→`text-success-strong`, `bg-blue-100`→`bg-primary-muted`). Nenhuma cor nova introduzida além dos tokens `-strong` derivados.
+11. **Nenhuma mudança de lógica:** stores, hooks, rotas e contratos de API intocados; widgets continuam lendo por seletores granulares (M1 da fase técnica preservada). Única alteração de comportamento: o erro inline do dropzone (feedback adicional ao toast existente) e a visibilidade dos botões dos thumbnails em touch.
+12. **Variáveis semânticas emitidas no build:** `bg-primary`, `border-border`, `text-text-muted`, `bg-primary-muted`, `ring-focus`, `bg-error-muted`, `text-success-strong`, etc. passaram a aparecer no CSS final (tree-shaking do Tailwind v4 agora encontra utilitários usados).
+
+### 🔍 Verificação pós-build
+
+- **SSR confirmado:** `GET /` entrega segmented control (track `bg-surface-muted`, 2 botões `aria-pressed`), dropzone com ícone de upload e hint de formatos, `EmptyState` com "Seu resultado aparecerá aqui / Envie uma imagem e inicie a compressão..." e RadioGroup de formato com chips `border bg-surface`.
+- **Nenhuma classe `zinc-*`/`blue-*`/`green-*`/`red-*` restante em `src/**/*.tsx`** (grep limpo) — todo o workspace e primitivos de UI migrados para tokens.
+- **Chunk do PDF preservado:** o modo PDF continua lazy (PdfGenerator via `dynamic`), com fallback de loading em tokens.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — segmented control, dropzone, empty states, radio chips com tokens; sem emojis 📁/📄 |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}` (354 B → 98 B, ratio 72.3%) |
+| `POST /api/pdf` (PNG + WebP, A4) | ✅ 200 — PDF válido (`%PDF-`) |
+
+**Resumo:** workspace redesenhado por completo — mode switcher vira segmented control com foco visível, dropzone ganha estados (drag/hover/selected/error) e ícone SVG, painel de resultado com `EmptyState` significativo + badge de formato, estrutura de layout alinhada ao conceito do plano (workspace → settings → CTA) em ambos os modos, e todo o workspace + primitivos de UI migrados para os tokens semânticos da Fase 1. Botões dos thumbnails do PDF agora funcionam em touch. Nenhuma regressão funcional. **Fase 3 concluída — base pronta para a Fase 4 (Controls).**
+
+### Próximos passos (Fase 4 — Controls)
+
+1. Revisar o quality slider (`RangeSlider`) — track/thumb custom, estados e keyboard support já nativos; avaliar toque fino do thumb.
+2. Revisar o format selector (`RadioGroup`) — estados disabled e consistência dos chips.
+3. Redesenhar a primary CTA — spinner no loading, estados success/error.
+4. Implementar estados de interação consistentes (loading/success/error) em todos os controles.

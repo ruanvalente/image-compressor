@@ -5,8 +5,8 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles = {
-  default: "bg-white shadow-sm",
-  dashed: "border-2 border-dashed border-zinc-200 bg-white",
+  default: "border border-border bg-surface shadow-sm",
+  dashed: "border-2 border-dashed border-border-strong bg-surface",
 };
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(

@@ -19,13 +19,16 @@
   --primary-active: #1e40af;
   --primary-foreground: #ffffff;
   --primary-muted: #eff6ff;
+  --primary-strong: #1e40af;
 
   --success: #16a34a;
   --success-muted: #dcfce7;
+  --success-strong: #166534;
   --warning: #d97706;
   --warning-muted: #fef3c7;
   --error: #dc2626;
   --error-muted: #fee2e2;
+  --error-strong: #991b1b;
 
   --focus: #3b82f6;
 
@@ -47,12 +50,15 @@
   --color-primary-active: var(--primary-active);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-muted: var(--primary-muted);
+  --color-primary-strong: var(--primary-strong);
   --color-success: var(--success);
   --color-success-muted: var(--success-muted);
+  --color-success-strong: var(--success-strong);
   --color-warning: var(--warning);
   --color-warning-muted: var(--warning-muted);
   --color-error: var(--error);
   --color-error-muted: var(--error-muted);
+  --color-error-strong: var(--error-strong);
   --color-focus: var(--focus);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

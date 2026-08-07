@@ -26,7 +26,7 @@ export function RadioGroup<T extends string>({
 
   return (
     <fieldset>
-      <legend className="mb-2 block text-sm font-medium text-zinc-800">
+      <legend className="mb-2 block text-sm font-medium text-text">
         {legend}
       </legend>
       <div className={`flex gap-2 ${className}`}>
@@ -41,7 +41,7 @@ export function RadioGroup<T extends string>({
               aria-describedby={hint ? hintId : undefined}
               className="peer sr-only"
             />
-            <span className="flex items-center justify-center rounded-lg bg-zinc-200 py-3 px-4 text-base font-medium text-zinc-900 transition-colors hover:bg-zinc-300 peer-checked:bg-blue-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2">
+            <span className="flex items-center justify-center rounded-lg border border-border bg-surface py-3 px-4 text-base font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2">
               {opt.label}
             </span>
           </label>

@@ -6,17 +6,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700",
-  secondary: "bg-zinc-200 text-zinc-900 hover:bg-zinc-300",
-  success: "bg-green-600 text-white hover:bg-green-700",
-  danger: "text-red-600 hover:text-red-700",
-  ghost: "bg-transparent text-zinc-700 hover:bg-zinc-200",
+  primary: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
+  secondary: "bg-surface-muted text-text hover:bg-border",
+  success: "bg-success text-primary-foreground hover:bg-success/90",
+  danger: "text-error hover:bg-error-muted",
+  ghost: "bg-transparent text-text-muted hover:bg-surface-muted hover:text-text",
 };
 
 const sizeStyles = {
   sm: "py-1.5 px-3 text-sm",
   md: "py-3 px-4 text-base",
-  lg: "py-4 px-6 text-lg",
+  lg: "py-3.5 px-6 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -27,7 +27,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         type={type}
         disabled={disabled}
         className={`
-          rounded-lg font-medium transition-colors
+          inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2
           disabled:cursor-not-allowed disabled:opacity-50
           ${variantStyles[variant]}
           ${variant !== "danger" && variant !== "ghost" ? sizeStyles[size] : ""}

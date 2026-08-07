@@ -20,7 +20,7 @@ export function FileDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
   const hintId = useId();
   const inputId = useId();
-  const { dragActive, handleDragOver, handleDragLeave, handleDrop } =
+  const { dragActive, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } =
     useFileDropzone(onFiles);
 
   const handleInputChange = useCallback(
@@ -58,6 +58,7 @@ export function FileDropzone({
       className={`relative flex h-64 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
         dragActive ? "border-blue-500 bg-blue-50" : "border-zinc-300 bg-white"
       } ${!preview || multiple ? "hover:border-zinc-400" : ""}`}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

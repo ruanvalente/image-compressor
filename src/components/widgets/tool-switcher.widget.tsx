@@ -25,38 +25,35 @@ type Mode = "compress" | "pdf";
 
 function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Selecione a ferramenta"
-      className="mb-6 flex overflow-hidden rounded-lg border border-zinc-300"
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={mode === "compress"}
-        onClick={() => onChange("compress")}
-        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
-          mode === "compress"
-            ? "bg-blue-600 text-white"
-            : "bg-white text-zinc-700 hover:bg-zinc-100"
-        }`}
-      >
-        Compressor
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={mode === "pdf"}
-        onClick={() => onChange("pdf")}
-        className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
-          mode === "pdf"
-            ? "bg-blue-600 text-white"
-            : "bg-white text-zinc-700 hover:bg-zinc-100"
-        }`}
-      >
-        PDF
-      </button>
-    </div>
+    <fieldset className="mb-6">
+      <legend className="sr-only">Selecione a ferramenta</legend>
+      <div className="flex overflow-hidden rounded-lg border border-zinc-300">
+        <button
+          type="button"
+          aria-pressed={mode === "compress"}
+          onClick={() => onChange("compress")}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+            mode === "compress"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-zinc-700 hover:bg-zinc-100"
+          }`}
+        >
+          Compressor
+        </button>
+        <button
+          type="button"
+          aria-pressed={mode === "pdf"}
+          onClick={() => onChange("pdf")}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+            mode === "pdf"
+              ? "bg-blue-600 text-white"
+              : "bg-white text-zinc-700 hover:bg-zinc-100"
+          }`}
+        >
+          PDF
+        </button>
+      </div>
+    </fieldset>
   );
 }
 

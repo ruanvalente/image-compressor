@@ -568,6 +568,70 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 
 ---
 
+## 4️⃣ Fase 4 — Polimento (concluída em 07/08/2026)
+
+> Escopo: M4 (ARIA de teclado) → M5 (decisão do dark mode) → itens baixos (L2 env de URL, L10 viewport/OG image, L3 pdf-lib, L8 README), mais L4/L6/L7 e o `.nvmrc` pendente da Etapa 0.
+
+### ✅ Execução
+
+| Item | Problema | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **M4** | `role="tab"/"tablist"` sem navegação por setas e `role="radio"` em `<button>` sem roving tabindex (viola o padrão ARIA e WCAG 2.1.1/2.4.7) | Tabs do `ToolSwitcher` → **segmented control** com `aria-pressed` (decisão documentada); radiogroups de formato e de tamanho de página → **`<input type="radio">` nativos** estilizados, via novo componente genérico `RadioGroup` (setas/foco/seleção nativos do browser + `fieldset`/`legend` como nome acessível) | `tool-switcher.widget.tsx`, `radio-group.ui.tsx` (novo), `format-selector.widget.tsx`, `pdf-generator.widget.tsx`, `components/ui/index.ts` |
+| **L6** | `RangeSlider`: `{...props}` vinha **depois** dos `aria-*` e sobrescrevia `aria-label`/`aria-valuetext` derivados | `{...props}` movido para **antes** dos atributos derivados (derivados passam a vencer) | `range-slider.ui.tsx` |
+| **L7** | `<span aria-label>` em elemento não-interativo não anuncia em todos os SRs | Texto `sr-only` ("Ordem N") + número visível com `aria-hidden` | `pdf-generator.widget.tsx` |
+| **M5** | Dark mode declarado (`prefers-color-scheme`) mas UI 100% clara — "colagem" de blocos brancos em tema escuro | **Decisão do usuário (opção a): remover o bloco dark e assumir tema claro**; `themeColor` = `#ffffff` no `viewport` | `globals.css`, `layout.tsx` |
+| **L2** | `metadataBase`/OG url/robots/sitemap com URL hardcoded (troca de domínio exige editar código) | `SITE_URL` central em `src/lib/site-url.ts` (`NEXT_PUBLIC_SITE_URL` com fallback e strip de `/`); `robots.txt` estático → `robots.ts` gerado; `.env.example` versionado (`!.env.example` no `.gitignore`) | `site-url.ts` (novo), `layout.tsx`, `robots.ts` (novo, substitui `robots.txt`), `sitemap.ts`, `.env.example` (novo), `.gitignore` |
+| **L10** | Sem `viewport`/`themeColor` e sem OG image | `export const viewport` com `themeColor`; `opengraph-image.tsx` + `twitter-image.tsx` via `next/og` `ImageResponse` com componente compartilhado `OgImage` (PNG 1200×630 gerado em build time) | `layout.tsx`, `opengraph-image.tsx` (novo), `twitter-image.tsx` (novo), `og-image.ui.tsx` (novo) |
+| **L4** | `quality` não afeta PNG (lossless) — slider parecia "sem efeito" | Decisão: manter `compressionLevel: 9` (qualidade é irrelevante em PNG full-color) + hint no UI quando `format === "png"` | `quality-control.widget.tsx` |
+| **L8** | README desatualizado (estrutura, Node 18+, sem scripts/CI/PDF) | Árvore do projeto atualizada (EN+PT), Node 20.9+, seção "Quality Checks", features de PDF/CI na stack | `README.md` |
+| **Etapa 0 · nota 5** | Runtime Node fixado em `engines` mas sem `.nvmrc` | `.nvmrc` criado com `20` (alinhado a `engines: >=20.9.0`) | `.nvmrc` (novo) |
+
+### 📌 Notas e decisões
+
+1. **M4 — segmented control no lugar do tab pattern:** o plano oferecia (a) padrão completo de tabs (setas + `aria-controls`/`tabpanel`) ou (b) segmented control com `aria-pressed`. Optamos por **(b)** por ser a alternativa mais simples e robusta: são 2 modos que alternam o conteúdo inteiro (não painéis coexistentes), os botões permanecem em tab order natural (Enter/espaço ativam) e `aria-pressed` anuncia o estado de seleção — atendendo WCAG 2.1.1 e 2.4.7 sem o custo de roving tabindex.
+2. **M4 — radios nativos:** `role="radio"` em `<button>` virou `<input type="radio">` real. Navegação por setas, foco e estado `checked` passam a ser nativos do browser. O `RadioGroup` é genérico (`<T extends string>`) e cobre os dois usos (formato e tamanho de página) sem duplicar estilos; nome acessível vem do `legend`, descrição opcional via `aria-describedby`.
+3. **M4 — foco visível nos radios:** input `sr-only` (permanece focusable) + `peer-focus-visible:ring-*` no label estilizado → o anel de foco aparece no "botão" visual ao navegar por teclado.
+4. **M5 — decisão registrada (usuário):** removido o bloco `@media (prefers-color-scheme: dark)`; tema claro único. Consequência documentada: a app não acompanha o tema do sistema. `themeColor` = `#ffffff` coerente com o tema.
+5. **L2 — env sem exposição ao cliente:** `SITE_URL` é lido apenas em módulos server (metadata do layout, `robots.ts`, `sitemap.ts`) — nenhum bundle client o importa. Troca de domínio = definir `NEXT_PUBLIC_SITE_URL` na plataforma de deploy.
+6. **L10 — OG image sem asset binário:** gerada com `next/og` em build time (rota estática `/opengraph-image`). PNG 1200×630 validado (`file`) e `og:image`/`twitter:image` absolutizados via `metadataBase`.
+7. **L3 — pdf-lib (reavaliação formal):** decisão da Etapa 0 **mantida** — congelar `1.17.1`. Nenhum requisito novo de PDF surgiu; o caso de uso (merge de imagens em páginas PDF) segue atendido e foi revalidado nesta fase. Nenhuma ação de código.
+8. **L9 — `calculateFit`:** documentado como **aceitável**. `Math.min(...)` preserva proporção e contém a imagem na página (contrato de "fit"). Imagens panorâmicas extremas podem renderizar finas, mas capar a escala desvirtuaria o ajuste. Nenhuma mudança.
+9. **L5 — nomenclatura `.ui.tsx`/`.widget.tsx`:** **mantida** por decisão. O sufixo é redundante com a pasta, porém o padrão é consistente na codebase e renomear ~12 arquivos + imports geraria churn sem ganho funcional. Registrado como débito estético aceito.
+10. **Teste novo:** `site-url.test.ts` (+2) cobre fallback e strip de barra — utilidade nova com lógica de env ganhou cobertura imediata (M7).
+11. **Pós-revisão — OG image self-contained:** `next/og` busca emojis Twemoji em um CDN público durante o build; em CI sem rede (ou CDN fora do ar) a imagem deixaria de renderizar e quebraria o build. O emoji 🖼️ foi substituído por um `<svg>` inline (satori renderiza SVG nativamente), removendo a dependência de rede — PNG 1200×630 revalidado.
+12. **Pós-revisão — env em build time:** `.env.example` agora deixa explícito que `NEXT_PUBLIC_SITE_URL` é lida em **build time** (as rotas são geradas estaticamente), alinhado ao fluxo de deploy do Netlify.
+
+### 🔍 Revisão de código (resultado da Fase 4)
+
+- Revisão automatizada sobre o diff da Fase 4. **BLOCKER: nenhum.** Confirmações: build gera `/robots.txt` (via `robots.ts`), `/sitemap.xml`, `/opengraph-image` e `/twitter-image`; HTML renderiza `theme-color` + `og:image`/`twitter:image` absolutos; nenhum `role="tab"/"radio"/"radiogroup"` restante em `src/`; seletores granulares (M1) preservados nos widgets alterados; ordem `{...props}`/`aria-*` correta no RangeSlider; toasts e fluxos intactos.
+- Ajustes aplicados pós-revisão:
+  1. **Teste `site-url` adicionado** — comportamento de env documentado por teste, não só por comentário.
+  2. **`robots.txt` removido do repo** — confirmado que nada referencia o arquivo estático; as rotas passam a usar o `robots.ts`.
+  3. **README** — além da árvore, Node 18+ → 20.9+ e nova seção "Quality Checks".
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 51 passed (antes 49; +2 `site-url`) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` | ✅ 200 — `<meta name="theme-color">` presente; `og:image`/`twitter:image` absolutos |
+| `GET /robots.txt` | ✅ 200 — conteúdo idêntico ao anterior, agora via env |
+| `GET /sitemap.xml` | ✅ 200 |
+| `GET /opengraph-image` | ✅ 200 `image/png` — PNG 1200×630 válido |
+| `GET /twitter-image` | ✅ 200 `image/png` |
+| `POST /api/compress` (PNG → webp) | ✅ 200 `{success:true}` |
+| `POST /api/compress` (arquivo 11 MB) | ✅ 400 `"Arquivo muito grande. Máximo: 10MB"` |
+| `POST /api/pdf` (2 imagens, A4, "relatorio final.pdf") | ✅ 200 — `pageCount: 2`, `filename: "relatorio_final.pdf"` |
+| `POST /api/pdf` (AVIF, original) | ✅ 200 |
+| `POST /api/pdf` (MIME falsificado) | ✅ 400 `"fake.png: Arquivo inválido..."` — nome na resposta |
+
+**Resumo:** M4 concluído (segmented control com `aria-pressed` + radios nativos; L6/L7), M5 decidido e aplicado (tema claro), L2 (URL via env) e L10 (viewport + OG/Twitter image) implementados, decisões formais registradas (L3 pdf-lib congelado; L9 aceitável; L5 mantido), README e `.nvmrc` atualizados. Nenhuma regressão nos dois fluxos principais. **Fase 4 concluída — roadmap do plano executado integralmente.**
+
+---
+
 ## 🗺️ Roadmap de implementação (ordem otimizada)
 
 **Etapa 0 — Dependências em dia (pré-requisito, ~1 h)** ✅ *concluída em 06/08/2026 — ver seção "Etapa 0" acima*
@@ -582,7 +646,7 @@ H2/H3 (módulo `constants.ts` + tipos compartilhados) → M2 (dropzone controlad
 **Fase 3 — Arquitetura (2–3 dias)** ✅ *concluída em 06/08/2026 — ver seção "Fase 3" acima*
 M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na rota PDF + `pageCount` correto + `error.tsx`/`loading.tsx`) → M7 (CI: lint + tsc + test + build). **Estado final:** página convertida a RSC com client islands e modo PDF lazy; rota PDF com validação de assinatura por arquivo (400 com nome), `pageCount` real e fix de assinatura AVIF; CI com `lint + typecheck + test + build` no GitHub Actions; 46 testes Vitest.
 
-**Fase 4 — Polimento (1–2 dias)**
-M4 (ARIA de teclado para tabs/radios) → M5 (decisão e correção do dark mode) → Itens baixos (env de URL, viewport/OG image, avaliação do pdf-lib, atualização do README).
+**Fase 4 — Polimento (1–2 dias)** ✅ *concluída em 07/08/2026 — ver seção "Fase 4" acima*
+M4 (ARIA de teclado para tabs/radios) → M5 (decisão e correção do dark mode) → Itens baixos (env de URL, viewport/OG image, avaliação do pdf-lib, atualização do README). **Estado final:** M4 com segmented control `aria-pressed` + `RadioGroup` de inputs nativos (L6/L7 corrigidos); M5 com tema claro decidido pelo usuário; `NEXT_PUBLIC_SITE_URL` (L2) e viewport/OG image (L10) implementados; decisões registradas (L3 pdf-lib congelado, L9 aceitável, L5 mantido); README e `.nvmrc` atualizados; 51 testes Vitest. **Roadmap 100% executado.**
 
 **Ordem racional:** corrigir o que quebra primeiro (Fase 1, esforço mínimo/retorno máximo), depois unificar regras e desacoplar (Fase 2, evita que a refatoração da Fase 3 duplique o esforço de atualização de constantes), depois arquitetura e CI (Fase 3), por fim acessibilidade e cosmética (Fase 4).

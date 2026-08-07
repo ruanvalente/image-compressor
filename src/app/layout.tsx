@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+};
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://image-compressor-web.netlify.app/"),
+  metadataBase: new URL(SITE_URL),
   title: "Image Compressor | Comprimir Imagens Online",
   description:
     "Ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG, PNG, WebP e AVIF. Rápido, seguro e gratuito.",
@@ -36,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    url: "https://image-compressor-web.netlify.app/",
+    url: SITE_URL,
     siteName: "Image Compressor",
     title: "Image Compressor | Comprimir Imagens Online",
     description:

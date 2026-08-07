@@ -17,6 +17,7 @@ Uma ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG,
 - 📤 Drag & drop or click to upload images
 - 🎚️ Adjustable quality slider (10-100%)
 - 🖼️ Multiple output formats: JPEG, PNG, WebP, AVIF
+- 📄 Merge multiple images into a single PDF (A4, Letter, or original size)
 - 📊 Real-time compression statistics (original size, compressed size, reduction %)
 - ⬇️ One-click download
 - 🔔 Toast notifications for user feedback
@@ -29,7 +30,10 @@ Uma ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG,
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
 - **Image Processing**: [Sharp](https://sharp.pixelplumbing.com/)
+- **PDF Generation**: [pdf-lib](https://pdf-lib.js.org/)
 - **Notifications**: [Sonner](https://sonner.vercel.app/)
+- **Testing**: [Vitest](https://vitest.dev/)
+- **CI**: [GitHub Actions](https://github.com/features/actions)
 - **Package Manager**: [Bun](https://bun.sh/)
 
 ### Getting Started
@@ -37,7 +41,7 @@ Uma ferramenta para comprimir imagens mantendo a melhor qualidade. Suporta JPEG,
 #### Prerequisites
 
 - [Bun](https://bun.sh/) installed (recommended)
-- or Node.js 18+ with npm/yarn/pnpm
+- or Node.js 20.9+ with npm/yarn/pnpm
 
 #### Installation
 
@@ -84,34 +88,66 @@ bun start
 npm start
 ```
 
+#### Quality Checks
+
+```bash
+bun run lint       # ESLint
+bun run typecheck  # TypeScript (tsc --noEmit)
+bun run test       # Vitest unit tests
+```
+
 ### Project Structure
 
 ```
 src/
 ├── app/
-│   ├── api/compress/           # Compression API endpoint
+│   ├── api/
+│   │   ├── compress/           # Compression API endpoint
+│   │   └── pdf/                # PDF generation API endpoint
+│   ├── error.tsx              # Global error boundary
+│   ├── loading.tsx            # Route loading skeleton
 │   ├── layout.tsx             # Root layout with metadata
-│   ├── page.tsx               # Main page component
-│   ├── robots.txt            # SEO robots file
-│   └── globals.css           # Global styles
+│   ├── page.tsx               # Server Component (root page)
+│   ├── robots.ts              # robots.txt (env-aware)
+│   ├── sitemap.ts             # sitemap.xml
+│   ├── opengraph-image.tsx    # Social sharing image
+│   ├── twitter-image.tsx      # Twitter card image
+│   └── globals.css            # Global styles
 ├── components/
-│   ├── ui/                   # Pure UI components (no logic)
+│   ├── ui/                    # Pure UI components (no logic)
+│   │   ├── badge.ui.tsx
 │   │   ├── button.ui.tsx
 │   │   ├── card.ui.tsx
-│   │   ├── badge.ui.tsx
+│   │   ├── og-image.ui.tsx
+│   │   ├── radio-group.ui.tsx
 │   │   └── range-slider.ui.tsx
-│   └── widgets/              # Functional components with logic
+│   └── widgets/               # Functional components with logic
+│       ├── compress-mode.widget.tsx
+│       ├── compression-result-card.widget.tsx
+│       ├── compression-settings.widget.tsx
 │       ├── file-dropzone.widget.tsx
 │       ├── format-selector.widget.tsx
-│       ├── quality-control.widget.tsx
 │       ├── image-preview.widget.tsx
-│       └── compression-result-card.widget.tsx
-├── hooks/                    # Custom React hooks
-│   └── use-image-compression.ts
+│       ├── pdf-download-card.widget.tsx
+│       ├── pdf-generator.widget.tsx
+│       ├── pdf-mode.widget.tsx
+│       ├── quality-control.widget.tsx
+│       └── tool-switcher.widget.tsx
+├── hooks/                     # Custom React hooks
+│   ├── use-file-dropzone.ts
+│   ├── use-image-compression.ts
+│   └── use-pdf-generation.ts
 └── lib/
-    ├── store/                # Zustand state management
-    │   └── compressor-store.ts
-    └── utils/               # Utility functions
+    ├── constants.ts           # Shared limits, formats, signatures
+    ├── types.ts               # Shared types (client + server)
+    ├── validation.ts          # Pure validators (unit tested)
+    ├── site-url.ts            # SITE_URL from environment
+    ├── store/                 # Zustand state management
+    │   ├── compressor-store.ts
+    │   └── pdf-store.ts
+    └── utils/                 # Utility functions
+        ├── base64.ts
+        ├── filename.ts
         ├── format-bytes.ts
         └── toast.ts
 ```
@@ -143,6 +179,7 @@ This project is open source and available under the [MIT License](LICENSE).
 - 📤 Arraste e solte ou clique para carregar imagens
 - 🎚️ Ajuste de qualidade (10-100%)
 - 🖼️ Múltiplos formatos de saída: JPEG, PNG, WebP, AVIF
+- 📄 Junte várias imagens em um único PDF (A4, Carta ou tamanho original)
 - 📊 Estatísticas em tempo real (tamanho original, tamanho comprimido, redução %)
 - ⬇️ Download com um clique
 - 🔔 Notificações toast para feedback do usuário
@@ -155,7 +192,10 @@ This project is open source and available under the [MIT License](LICENSE).
 - **Estilização**: [Tailwind CSS](https://tailwindcss.com/)
 - **Gerenciamento de Estado**: [Zustand](https://zustand-demo.pmnd.rs/)
 - **Processamento de Imagens**: [Sharp](https://sharp.pixelplumbing.com/)
+- **Geração de PDF**: [pdf-lib](https://pdf-lib.js.org/)
 - **Notificações**: [Sonner](https://sonner.vercel.app/)
+- **Testes**: [Vitest](https://vitest.dev/)
+- **CI**: [GitHub Actions](https://github.com/features/actions)
 - **Gerenciador de Pacotes**: [Bun](https://bun.sh/)
 
 ### Começando
@@ -163,7 +203,7 @@ This project is open source and available under the [MIT License](LICENSE).
 #### Pré-requisitos
 
 - [Bun](https://bun.sh/) instalado (recomendado)
-- ou Node.js 18+ com npm/yarn/pnpm
+- ou Node.js 20.9+ com npm/yarn/pnpm
 
 #### Instalação
 
@@ -210,34 +250,66 @@ bun start
 npm start
 ```
 
+#### Verificações de Qualidade
+
+```bash
+bun run lint       # ESLint
+bun run typecheck  # TypeScript (tsc --noEmit)
+bun run test       # Testes unitários Vitest
+```
+
 ### Estrutura do Projeto
 
 ```
 src/
 ├── app/
-│   ├── api/compress/           # Endpoint da API de compressão
+│   ├── api/
+│   │   ├── compress/           # Endpoint da API de compressão
+│   │   └── pdf/                # Endpoint da API de geração de PDF
+│   ├── error.tsx              # Error boundary global
+│   ├── loading.tsx            # Skeleton de loading de rota
 │   ├── layout.tsx             # Layout raiz com metadados
-│   ├── page.tsx               # Componente da página principal
-│   ├── robots.txt            # Arquivo robots para SEO
-│   └── globals.css           # Estilos globais
+│   ├── page.tsx               # Server Component (página raiz)
+│   ├── robots.ts              # robots.txt (usa env)
+│   ├── sitemap.ts             # sitemap.xml
+│   ├── opengraph-image.tsx    # Imagem de compartilhamento social
+│   ├── twitter-image.tsx      # Imagem do card do Twitter
+│   └── globals.css            # Estilos globais
 ├── components/
-│   ├── ui/                   # Componentes UI puros (sem lógica)
+│   ├── ui/                    # Componentes UI puros (sem lógica)
+│   │   ├── badge.ui.tsx
 │   │   ├── button.ui.tsx
 │   │   ├── card.ui.tsx
-│   │   ├── badge.ui.tsx
+│   │   ├── og-image.ui.tsx
+│   │   ├── radio-group.ui.tsx
 │   │   └── range-slider.ui.tsx
-│   └── widgets/              # Componentes funcionais com lógica
+│   └── widgets/               # Componentes funcionais com lógica
+│       ├── compress-mode.widget.tsx
+│       ├── compression-result-card.widget.tsx
+│       ├── compression-settings.widget.tsx
 │       ├── file-dropzone.widget.tsx
 │       ├── format-selector.widget.tsx
-│       ├── quality-control.widget.tsx
 │       ├── image-preview.widget.tsx
-│       └── compression-result-card.widget.tsx
-├── hooks/                    # Hooks React personalizados
-│   └── use-image-compression.ts
+│       ├── pdf-download-card.widget.tsx
+│       ├── pdf-generator.widget.tsx
+│       ├── pdf-mode.widget.tsx
+│       ├── quality-control.widget.tsx
+│       └── tool-switcher.widget.tsx
+├── hooks/                     # Hooks React personalizados
+│   ├── use-file-dropzone.ts
+│   ├── use-image-compression.ts
+│   └── use-pdf-generation.ts
 └── lib/
-    ├── store/                # Gerenciamento de estado Zustand
-    │   └── compressor-store.ts
-    └── utils/               # Funções utilitárias
+    ├── constants.ts           # Limites, formatos e assinaturas compartilhados
+    ├── types.ts               # Tipos compartilhados (cliente + servidor)
+    ├── validation.ts          # Validadores puros (com testes unitários)
+    ├── site-url.ts            # SITE_URL vinda do ambiente
+    ├── store/                 # Gerenciamento de estado Zustand
+    │   ├── compressor-store.ts
+    │   └── pdf-store.ts
+    └── utils/                 # Funções utilitárias
+        ├── base64.ts
+        ├── filename.ts
         ├── format-bytes.ts
         └── toast.ts
 ```

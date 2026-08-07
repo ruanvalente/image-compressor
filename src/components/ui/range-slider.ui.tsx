@@ -31,12 +31,12 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
           type="range"
           value={value}
           className={`w-full accent-blue-600 ${className}`}
+          {...props}
           aria-label={label ? undefined : props["aria-label"]}
           aria-valuemin={Number(props.min || 0)}
           aria-valuemax={Number(props.max || 100)}
           aria-valuenow={Number(value)}
           aria-valuetext={displayValue}
-          {...props}
         />
       </div>
     );

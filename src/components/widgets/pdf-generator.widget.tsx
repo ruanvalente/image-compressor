@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import Image from "next/image";
 import { usePdfStore } from "@/lib/store/pdf-store";
 import { usePdfGeneration } from "@/hooks";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, RadioGroup } from "@/components/ui";
 import { FileDropzone } from "./file-dropzone.widget";
 import { formatBytes } from "@/lib/utils/format-bytes";
 import { toast } from "@/lib/utils/toast";
@@ -91,30 +91,13 @@ export function PdfGenerator() {
 
       {files.length > 0 && (
         <>
-          <fieldset>
-            <legend className="mb-2 block text-sm font-medium text-zinc-800">
-              Tamanho da página
-            </legend>
-            <div
-              role="radiogroup"
-              aria-label="Selecione o tamanho da página do PDF"
-              className="flex gap-2"
-            >
-              {PAGE_SIZE_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={pageSize === opt.value ? "primary" : "secondary"}
-                  onClick={() => setPageSize(opt.value)}
-                  className="flex-1"
-                  role="radio"
-                  aria-checked={pageSize === opt.value}
-                  aria-label={`Tamanho ${opt.label}`}
-                >
-                  {opt.label}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
+          <RadioGroup
+            name="page-size"
+            legend="Tamanho da página"
+            options={PAGE_SIZE_OPTIONS}
+            value={pageSize}
+            onChange={setPageSize}
+          />
 
           <Card className="space-y-3">
             <div className="flex items-center justify-between">
@@ -231,11 +214,9 @@ export function PdfGenerator() {
                     </button>
                   </div>
 
-                  <span
-                    className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white"
-                    aria-label={`Ordem ${index + 1}`}
-                  >
-                    {index + 1}
+                  <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                    <span className="sr-only">{`Ordem ${index + 1}`}</span>
+                    <span aria-hidden="true">{index + 1}</span>
                   </span>
                 </li>
               ))}

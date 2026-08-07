@@ -368,9 +368,9 @@ Rotas e widgets importam deste módulo (só valores/tipos → zero custo no bund
 
 **Decisões registradas:**
 
-1. **TypeScript 7.0.2 (major, tsgo) — ⏸️ adiado.** Upgrade sem rede de testes (M7) contraria o plano. Reavaliar na Fase 3, quando o CI (M7) existir.
-2. **ESLint 10.8.0 (major) — ⏸️ adiado.** Compatível tecnicamente (peer `>=9.0.0` + flat config já em uso), mas é major sem testes. Reavaliar junto do TS 7 na Fase 3/4.
-3. **`@types/node` 26.x (major) — ⏸️ adiado.** Runtime atual é Node 22. Mantido 20.x; revisitar quando o runtime de produção for definido.
+1. **TypeScript 7.0.2 (major, tsgo) — ⏸️ adiado.** Upgrade sem rede de testes (M7) contraria o plano. Reavaliar na Fase 3, quando o CI (M7) existir. *→ Reavaliado com upgrade real em 07/08/2026: mantido em 5.9.3 por blocker externo (typescript-estree) — ver Follow-ups, item 1.*
+2. **ESLint 10.8.0 (major) — ⏸️ adiado.** Compatível tecnicamente (peer `>=9.0.0` + flat config já em uso), mas é major sem testes. Reavaliar junto do TS 7 na Fase 3/4. *→ Reavaliado com upgrade real em 07/08/2026: mantido em 9.39.5 por blocker externo (eslint-plugin-react) — ver Follow-ups, item 2.*
+3. **`@types/node` 26.x (major) — ⏸️ adiado.** Runtime atual é Node 22. Mantido 20.x; revisitar quando o runtime de produção for definido. *→ Runtime definido em 07/08/2026 (Node 22 LTS): `@types/node` alinhado ao 22.x; major 26 descartado — ver Follow-ups, item 3.*
 4. **`pdf-lib@1.17.1` (L3) — 📌 DECISÃO: congelar (pin) e manter.** O pacote está abandonado desde 2021, mas cumpre o caso de uso (merge de imagens em páginas PDF) e foi validado funcionalmente nesta etapa. Migração (`@react-pdf/renderer`) é mudança maior com custo de runtime e não há ganho proporcional agora. Reavaliação formal agendada na **Fase 4** — se surgir necessidade de novos recursos de PDF, migrar antes. Pin aplicado em `package.json` (removido o `^`). *(Anotação criada em 06/08/2026.)*
 5. **Requisito de runtime Node `>=20.9.0`** — adicionado campo `engines` em `package.json` (exigido por `next@16.3.0` e `sharp@0.35.3`). Sem `.nvmrc`/Dockerfile ainda; se for deployar em Node 18+, criar `.nvmrc` na Fase 4 (env de URL/deploy).
 
@@ -632,6 +632,55 @@ Ajustes aplicados a partir da revisão automatizada (nenhum era blocker; todos d
 
 ---
 
+## 5️⃣ Follow-ups pós-Fase 4 — fechamento dos itens pendentes (concluído em 07/08/2026)
+
+> Escopo: reavaliar os majors adiados na Etapa 0 (TS 7 e ESLint 10) com a rede de testes ativa · definir o runtime de produção e alinhar `@types/node` · corrigir o flicker do drag (Fase 2, nota 5) · implementar o rate limiting apontado na auditoria. Não faz parte do roadmap original — fecha os resíduos deixados por decisão ou promessa.
+
+### ✅ Execução
+
+| Item | Situação | Execução realizada | Resultado |
+|---|---|---|---|
+| **TS 7.0.2 (major, Corsa)** | Adiado na Etapa 0: "reavaliar quando o CI (M7) existir" | Upgrade **real** tentado com o CI ativo: `typescript@7.0.2` instalado → `typecheck` ✅, `test` 57/57 ✅, `build` ✅ | ❌ **Mantido em 5.9.3 — blocker externo no lint.** `@typescript-eslint/typescript-estree` quebra com TS 7 (`Cannot read properties of undefined (reading 'Cjs')`); o peer do `@typescript-eslint/parser@8.66.0` (mais recente) é `typescript: '>=4.8.4 <6.1.0'` — o ecossistema de lint ainda não suporta TS 7 |
+| **ESLint 10.8.0 (major)** | Adiado na Etapa 0: "reavaliar junto do TS 7 na Fase 3/4" | Upgrade **real** tentado: `eslint@10.8.0` instalado (com TS 5.9.3 o `typescript-estree` carrega) | ❌ **Mantido em 9.39.5 — blocker externo no lint.** `eslint-plugin-react@7.37.5` (mais recente, core do lint do Next) falha com `contextOrFilename.getFilename is not a function`; o peer dele é `eslint: '^3…^9.7'` — plugin ainda não suporta ESLint 10 |
+| **`@types/node` 26.x** | Adiado: "revisitar quando o runtime de produção for definido" | Runtime de produção **definido: Node 22** (LTS de manutenção, alinhado ao ambiente v22.20.0). `.nvmrc` 20→**22**; `@types/node` 20.19.43→**22.20.1** (major 22 = runtime) | ✅ Fechado. Major 26.x **descartado** (não alinhado ao runtime). `engines` mantido `>=20.9.0` (mínimo) |
+| **Flicker do `dragleave`** (Fase 2 nota 5) | Reavaliar na Fase 4 "se necessário" | Corrigido: `useFileDropzone` usa contador de profundidade `dragenter`/`dragleave` (`dragDepthRef`) — passar o mouse sobre filhos (preview/texto) não desliga mais o highlight; reset no `drop`. `onDragEnter` ligado no `FileDropzone` | ✅ Resolvido |
+| **Rate limiting** (risco da auditoria) | Sem rate limiting nas rotas | Novo `src/lib/rate-limit.ts`: limiter de janela deslizante em memória por IP (padrão **30 req/min**), `RateLimitExceeded` → **429 + header `Retry-After`**, `getClientIp` (`x-forwarded-for` → `x-real-ip` → "unknown"). Aplicado no início de `POST /api/compress` e `POST /api/pdf` (orçamento combinado por IP) + **6 testes** de unidade | ✅ Implementado. Limitação documentada: em serverless (Netlify) o estado é por instância de função — proteção global exige rate limit na plataforma |
+
+### 📌 Notas e decisões
+
+1. **A condição da Etapa 0 foi cumprida e superada.** O "NÃO atualizar sem rede de testes (M7)" era para proteger contra major sem rede de segurança; com o CI ativo rodamos os dois upgrades de verdade e chegamos a blockers **externos** (tooling de lint), não da codebase. TS 7 compila, testa e builda a aplicação.
+2. **TS 7 ⏸️ (com evidência).** Reavaliação: quando `@typescript-eslint` publicar peer com suporte a TS 7 (hoje `<6.1.0`), repetir o teste daqui (o código já é compatível).
+3. **ESLint 10 ⏸️ (com evidência).** Reavaliação: quando `eslint-plugin-react` publicar suporte a ESLint 10 (hoje `^9.7`), repetir o teste.
+4. **TypeScript pinado em `5.9.3` (exato)** no `package.json` (antes `^5`): intencional, para impedir que um `install` futuro resolva o major 7 sem revisão explícita (lembrar do blocker acima).
+5. **Runtime de produção = Node 22 (LTS)** fecha o item "revisitar quando o runtime de produção for definido". O Netlify seleciona a versão pelo `.nvmrc`.
+6. **Rate limit compartilhado entre rotas:** em dev (single process) é orçamento combinado por IP para os dois endpoints; no Netlify cada rota é uma função com estado de memória próprio (efetivamente por rota/instância). Best-effort por design — documentado como mitigação, não como substituição de rate limit na plataforma.
+7. **Flicker:** correção clássica de contador de profundidade de drag; a limitação pré-existente documentada na Fase 2 deixa de existir.
+
+### 🔍 Revisão de código (resultado)
+
+- Revisão automatizada sobre o diff. **BLOCKER: nenhum.** Confirmações: `RateLimitExceeded` tratado antes de `ValidationError`/`PdfError` nas duas rotas (429 com `Retry-After` não é mascarado); contador de drag com `Math.max(0, …)` evita estado negativo; testes do limiter determinísticos (fake timers + janela real); pin do TS e range `^9` do ESLint coerentes com as decisões; nenhuma referência órfã a `@types/node@20`/`.nvmrc` 20.
+- Ajustes aplicados pós-revisão: nenhum além do relatado (a revisão formal final é do usuário).
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ (ESLint 9.39.5) |
+| `bun run typecheck` | ✅ (TS 5.9.3) |
+| `bun run test` | ✅ 57 passed (antes 51; +6 `rate-limit`) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` | ✅ 200 |
+| `POST /api/compress` (PNG → webp) | ✅ 200 `{success:true}`, `img1.webp` |
+| `POST /api/compress` (PNG → avif) | ✅ 200 |
+| `POST /api/compress` (31ª req na janela) | ✅ **429** + `Retry-After: 47` (rate limit) |
+| `POST /api/pdf` (2 imagens, A4, "relatorio final") | ✅ 200 — `pageCount: 2`, `relatorio_final.pdf` |
+| TS 7.0.2 (tentativa de upgrade) | typecheck/test/build ✅ · **lint ❌** (blocker `typescript-estree`) |
+| ESLint 10.8.0 (tentativa de upgrade) | **lint ❌** (blocker `eslint-plugin-react`) |
+
+**Resumo:** os dois majors adiados na Etapa 0 foram **reavaliados com upgrade real e evidência** — mantidos em TS 5.9.3 e ESLint 9.39.5 por blockers externos de tooling (com critério de reavaliação registrado); runtime de produção definido (Node 22) com `@types/node` alinhado; flicker do drag corrigido; rate limiting implementado (429 + `Retry-After`, 6 testes). Nenhuma regressão nos dois fluxos principais. **Follow-ups concluídos — todos os itens pendentes/encerrados do plano fechados.**
+
+---
+
 ## 🗺️ Roadmap de implementação (ordem otimizada)
 
 **Etapa 0 — Dependências em dia (pré-requisito, ~1 h)** ✅ *concluída em 06/08/2026 — ver seção "Etapa 0" acima*
@@ -648,5 +697,8 @@ M3 (page RSC + `ToolSwitcher` + `next/dynamic` do PDF) → M6 (magic bytes na ro
 
 **Fase 4 — Polimento (1–2 dias)** ✅ *concluída em 07/08/2026 — ver seção "Fase 4" acima*
 M4 (ARIA de teclado para tabs/radios) → M5 (decisão e correção do dark mode) → Itens baixos (env de URL, viewport/OG image, avaliação do pdf-lib, atualização do README). **Estado final:** M4 com segmented control `aria-pressed` + `RadioGroup` de inputs nativos (L6/L7 corrigidos); M5 com tema claro decidido pelo usuário; `NEXT_PUBLIC_SITE_URL` (L2) e viewport/OG image (L10) implementados; decisões registradas (L3 pdf-lib congelado, L9 aceitável, L5 mantido); README e `.nvmrc` atualizados; 51 testes Vitest. **Roadmap 100% executado.**
+
+**Follow-ups pós-Fase 4** ✅ *concluído em 07/08/2026 — ver seção "Follow-ups" acima*
+Fechamento dos resíduos: majors TS 7 / ESLint 10 reavaliados com upgrade real (mantidos por blockers externos de tooling, com critério de reavaliação); runtime de produção definido (Node 22 LTS) com `@types/node` alinhado; flicker do drag corrigido; rate limiting implementado (429 + `Retry-After`, 6 testes). **Estado final:** todos os itens pendentes/encerrados do plano fechados; 57 testes Vitest.
 
 **Ordem racional:** corrigir o que quebra primeiro (Fase 1, esforço mínimo/retorno máximo), depois unificar regras e desacoplar (Fase 2, evita que a refatoração da Fase 3 duplique o esforço de atualização de constantes), depois arquitetura e CI (Fase 3), por fim acessibilidade e cosmética (Fase 4).

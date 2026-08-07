@@ -9,6 +9,7 @@ import {
   validateFileSignature,
 } from "@/lib/validation";
 import type { CompressionResult } from "@/lib/types";
+import { RateLimitExceeded, getClientIp, rateLimit } from "@/lib/rate-limit";
 
 interface CompressionResponse extends CompressionResult {
   success: true;
@@ -53,6 +54,8 @@ async function verifyContentType(request: NextRequest): Promise<void> {
 
 export async function POST(request: NextRequest) {
   try {
+    rateLimit(getClientIp(request));
+
     await verifyContentType(request);
 
     const formData = await request.formData();
@@ -95,6 +98,16 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof RateLimitExceeded) {
+      return NextResponse.json(
+        { success: false, error: error.message } satisfies CompressionError,
+        {
+          status: 429,
+          headers: { "Retry-After": String(error.retryAfter) },
+        },
+      );
+    }
+
     if (error instanceof ValidationError) {
       return NextResponse.json(
         { success: false, error: error.message } satisfies CompressionError,

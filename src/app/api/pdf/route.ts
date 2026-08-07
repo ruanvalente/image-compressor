@@ -9,6 +9,7 @@ import {
   validatePdfFiles,
 } from "@/lib/validation";
 import type { PageSize } from "@/lib/types";
+import { RateLimitExceeded, getClientIp, rateLimit } from "@/lib/rate-limit";
 
 class PdfError extends Error {
   constructor(
@@ -57,6 +58,8 @@ function calculateFit(
 
 export async function POST(request: NextRequest) {
   try {
+    rateLimit(getClientIp(request));
+
     const contentType = request.headers.get("content-type");
     if (!contentType?.includes("multipart/form-data")) {
       throw new PdfError("Content-Type deve ser multipart/form-data");
@@ -153,6 +156,16 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (error) {
+    if (error instanceof RateLimitExceeded) {
+      return NextResponse.json(
+        { error: error.message },
+        {
+          status: 429,
+          headers: { "Retry-After": String(error.retryAfter) },
+        },
+      );
+    }
+
     if (error instanceof PdfError || error instanceof ValidationError) {
       return NextResponse.json(
         { error: error.message },

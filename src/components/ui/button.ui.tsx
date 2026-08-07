@@ -31,7 +31,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2
           disabled:cursor-not-allowed disabled:opacity-50
           ${variantStyles[variant]}
-          ${variant !== "danger" && variant !== "ghost" ? sizeStyles[size] : ""}
+          ${sizeStyles[size]}
           ${className}
         `}
         {...props}

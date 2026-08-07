@@ -4,7 +4,7 @@ import { useCompressorStore } from "@/lib/store/compressor-store";
 import { formatBytes } from "@/lib/utils/format-bytes";
 import { Button, ImageIcon, XIcon } from "@/components/ui";
 
-export function CompressionSettings() {
+export function CompressionSettings({ onRemove }: { onRemove?: () => void }) {
   const file = useCompressorStore((s) => s.file);
   const setFile = useCompressorStore((s) => s.setFile);
   const setPreview = useCompressorStore((s) => s.setPreview);
@@ -13,6 +13,7 @@ export function CompressionSettings() {
   if (!file) return null;
 
   const handleRemove = () => {
+    onRemove?.();
     setFile(null);
     setPreview("");
     setCompressed(null);

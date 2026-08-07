@@ -11,8 +11,11 @@ const PdfGenerator = dynamic(
   {
     loading: () => (
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="flex h-56 items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-surface sm:h-64">
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-surface-muted sm:h-64">
           <p className="text-sm text-text-subtle">Carregando ferramenta de PDF...</p>
+        </div>
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-surface-muted sm:h-64">
+          <p className="sr-only">Carregando resultado...</p>
         </div>
       </div>
     ),

@@ -84,7 +84,7 @@ export function CompressMode() {
       </div>
 
       <Card className="space-y-5">
-        <CompressionSettings />
+        <CompressionSettings onRemove={() => setDropzoneError(null)} />
         <QualityControl />
         <FormatSelector />
       </Card>

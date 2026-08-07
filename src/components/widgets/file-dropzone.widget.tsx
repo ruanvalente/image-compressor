@@ -86,7 +86,17 @@ export function FileDropzone({
       <span id={hintId} className="sr-only">
         {hint}
       </span>
-      {!multiple && preview ? (
+      {error ? (
+        <div className="px-6 text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error-muted text-error">
+            <XIcon className="h-6 w-6" />
+          </span>
+          <p id={errorId} role="alert" className="mt-3 text-sm font-medium text-error">
+            {error}
+          </p>
+          <p className="mt-0.5 text-xs text-text-muted">{subHint}</p>
+        </div>
+      ) : !multiple && preview ? (
         <>
           <Image
             src={preview}
@@ -100,16 +110,6 @@ export function FileDropzone({
             Trocar imagem
           </span>
         </>
-      ) : error ? (
-        <div className="px-6 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error-muted text-error">
-            <XIcon className="h-6 w-6" />
-          </span>
-          <p id={errorId} role="alert" className="mt-3 text-sm font-medium text-error">
-            {error}
-          </p>
-          <p className="mt-0.5 text-xs text-text-muted">{subHint}</p>
-        </div>
       ) : (
         <div className="px-6 text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-muted text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">

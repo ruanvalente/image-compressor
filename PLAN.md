@@ -702,3 +702,57 @@ M4 (ARIA de teclado para tabs/radios) → M5 (decisão e correção do dark mode
 Fechamento dos resíduos: majors TS 7 / ESLint 10 reavaliados com upgrade real (mantidos por blockers externos de tooling, com critério de reavaliação); runtime de produção definido (Node 22 LTS) com `@types/node` alinhado; flicker do drag corrigido; rate limiting implementado (429 + `Retry-After`, 6 testes). **Estado final:** todos os itens pendentes/encerrados do plano fechados; 57 testes Vitest.
 
 **Ordem racional:** corrigir o que quebra primeiro (Fase 1, esforço mínimo/retorno máximo), depois unificar regras e desacoplar (Fase 2, evita que a refatoração da Fase 3 duplique o esforço de atualização de constantes), depois arquitetura e CI (Fase 3), por fim acessibilidade e cosmética (Fase 4).
+
+---
+
+## 🎨 Roadmap de Modernização de UI (`UI-PLAN.md`) — em andamento desde 07/08/2026
+
+> Novo roadmap, separado do plano técnico acima. Escopo: **modernizar a UI mantendo business logic, contratos de API, funcionalidades, stack (Next.js, TypeScript, Tailwind) — sem adicionar dependências**. Mobile-first. Cada fase é executada, validada e documentada aqui antes de avançar (workflow exigido pelo usuário). Conversa e documentação em **pt-BR**.
+
+## 1️⃣ Fase 1 — Foundation (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 1): revisar a config Tailwind, identificar design tokens existentes, estabelecer convenções de espaçamento/tipografia, cores semânticas, comportamento de container e breakpoints responsivos. Sem mudança estrutural de componentes.
+
+### ✅ Execução
+
+| Item | Situação | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **Revisão da config Tailwind** | Tailwind v4 CSS-first: **não há `tailwind.config`**; tema via `@theme`/CSS. Breakpoints default v4 confirmados: sm 40rem, md 48rem, lg 64rem, xl 80rem, 2xl 96rem | Mantida a abordagem CSS-first; nenhum arquivo de config criado. Decisão: tokens via `@theme inline` para expor utilitários semânticos a partir de variáveis `:root` | `src/app/globals.css` |
+| **🐛 Bug de tipografia** | `body { font-family: Arial }` sobrescrevia a Geist (app renderizava com Arial apesar da fonte Next carregada) | `body` passa a usar `var(--font-geist-sans, Arial, Helvetica, sans-serif)` — fallback Arial apenas se a fonte não carregar | `src/app/globals.css` |
+| **Tokens de cor semânticos** | Componentes usavam cores hardcoded (`zinc-*`, `blue-*`, `green-*`) em todo o app — sem linguagem visual comum | Bloco `:root` com 20 variáveis semânticas (background, foreground, surface, surface-muted, border, border-strong, text, text-muted, text-subtle, primary + hover/active/foreground/muted, success, warning, error + muted, focus) + `@theme inline` mapeando para `--color-*` → utilitários `bg-surface`, `text-text-muted`, `border-border`, `bg-primary`, etc. | `src/app/globals.css` |
+| **Container centralizado** | `page.tsx` (`max-w-4xl px-4 py-8`), `layout.tsx` header/footer e `error.tsx` duplicavam o padrão de container | Classe de componente `.container-app` em `@layer components`: `max-width: var(--container-max)` (**56rem**, preserva o `max-w-4xl` atual) + `margin-inline: auto` + `padding-inline: 1rem` (→ `1.5rem` em sm+). Padrão único para as próximas fases | `src/app/globals.css` |
+| **Breakpoints** | Sem definição explícita de breakpoints | **Decisão:** usar os defaults do Tailwind v4 (sm 40rem / md 48rem / lg 64rem / xl 80rem / 2xl 96rem) — valores coerentes com o layout atual; nenhuma customização necessária. Documentado como convenção | — |
+| **Fonte padrão** | Geist carregada via `next/font` mas `--font-sans` não apontava para ela (parte do bug de tipografia) | `--font-sans: var(--font-geist-sans)` e `--font-mono: var(--font-geist-mono)` no `@theme inline` — utilitários `font-sans`/`font-mono` agora usam as fontes do `next/font` | `src/app/globals.css` |
+
+### 📌 Notas e decisões
+
+1. **`@theme inline` vs `@theme`:** usamos `inline` porque os valores já vivem em `:root` (estratégia de tokens do Tailwind v4). O Tailwind **não emite** as variáveis `--color-*` no CSS final até um utilitário semântico ser usado — verificamos no build atual que o `@layer theme` só contém a paleta default (zinc/blue/green/red) usada pelos componentes. Os utilitários semânticos (`bg-primary`, etc.) **ainda não aparecem** porque nenhum componente os usa — adoção incremental nas Fases 3–4 os fará ser emitidos.
+2. **Paleta derivada da atual, não inventada:** `primary` = `blue-600` (#2563eb, cor de ação atual), `success` = `green-600`, `warning` = `amber-600`, `error` = `red-600`, surfaces = branco/zinc. Mesma linguagem visual, agora com nomes semânticos. Isso garante que a migração das próximas fases **não altera a aparência atual** (contraste preservado).
+3. **Container `56rem` ≠ `max-w-4xl`?** `max-w-4xl` = 56rem. Ou seja, `.container-app` **preserva exatamente** a largura atual — a migração é drop-in sem mudança visual. Definido via `--container-max` para permitir ajuste centralizado futuro.
+4. **Convenções registradas para as próximas fases:** espaçamento pela escala padrão do Tailwind (`--spacing`), sem valores arbitrários; tipografia nos níveis existentes (base/lg/xl/3xl/4xl) com pesos medium/semibold/bold; `:focus-visible` para foco de teclado; **sem dark mode** (decisão da Fase 4 técnica mantida — tema claro único).
+5. **Nenhuma mudança estrutural nesta fase** (shell, header, footer, widgets, cards) — escopo das Fases 2–4.
+
+### 🔍 Verificação pós-build
+
+- **Tokens `:root` confirmados no CSS final** (`--background`, `--primary`, `--container-max`, etc. presentes).
+- **`.container-app` emitido** em `@layer components` com `padding-inline: 1.5rem` no breakpoint `40rem` — corretamente compilado.
+- **Fonte:** `<html>` carrega a classe de variável da Geist (`geist_*__variable`) e o `body` referencia `var(--font-geist-sans)` — bug da Arial corrigido de ponta a ponta.
+- **`--color-*` semânticos NÃO emitidos** até utilitário ser usado (comportamento esperado do tree-shaking do Tailwind v4; ver nota 1).
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `npm run lint` | ✅ |
+| `npx tsc --noEmit` | ✅ (exit 0) |
+| `npm test` | ✅ 57 passed (6 arquivos) |
+| `npm run build` | ✅ rotas: `/` (estática), `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — CSS final contém tokens, `.container-app` e fonte Geist correta |
+
+**Resumo:** fundação de design estabelecida — tokens semânticos (cores + container) com paleta derivada da atual (zero mudança visual), bug da fonte Geist corrigido, breakpoints default documentados como convenção. Nenhuma regressão funcional. **Fase 1 concluída — base pronta para a Fase 2 (Application Shell).**
+
+### Próximos passos (Fase 2 — Application Shell)
+
+1. Refatorar header e footer inline do `layout.tsx` para `components/layout/Header.tsx` / `Footer.tsx`.
+2. Migrar os containers duplicados (`page.tsx`, `layout.tsx`, `error.tsx`) para `.container-app`.
+3. Melhorar o ritmo vertical global (espaçamento entre header/main/footer).

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useCompressorStore } from "@/lib/store/compressor-store";
 import { useImageCompression } from "@/hooks";
-import { Button } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { toast } from "@/lib/utils/toast";
 import { MAX_COMPRESS_FILE_SIZE } from "@/lib/constants";
 import { FileDropzone } from "./file-dropzone.widget";
@@ -19,12 +19,16 @@ export function CompressMode() {
   const compressed = useCompressorStore((s) => s.compressed);
   const loading = useCompressorStore((s) => s.loading);
   const { compress, download } = useImageCompression();
+  const [dropzoneError, setDropzoneError] = useState<string | null>(null);
 
   const handleFiles = useCallback((files: File[]) => {
     const selected = files[0];
     if (!selected) return;
 
     if (!selected.type.startsWith("image/")) {
+      setDropzoneError(
+        "Formato não suportado — envie apenas imagens (JPG, PNG, WebP, AVIF).",
+      );
       toast.error("Tipo de arquivo inválido", {
         description:
           "Por favor, envie apenas imagens (JPEG, PNG, WebP, etc.)",
@@ -33,12 +37,16 @@ export function CompressMode() {
     }
 
     if (selected.size > MAX_COMPRESS_FILE_SIZE) {
+      setDropzoneError(
+        `Arquivo muito grande — limite de ${MAX_COMPRESS_FILE_SIZE / 1024 / 1024}MB para compressão.`,
+      );
       toast.error("Arquivo muito grande", {
         description: `Limite de ${MAX_COMPRESS_FILE_SIZE / 1024 / 1024}MB para compressão`,
       });
       return;
     }
 
+    setDropzoneError(null);
     useCompressorStore.getState().setFile(selected);
     useCompressorStore.getState().setCompressed(null);
 
@@ -53,38 +61,42 @@ export function CompressMode() {
   }, []);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <div className="space-y-4">
-        <FileDropzone preview={preview} onFiles={handleFiles} />
-        <CompressionSettings />
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <FileDropzone
+          preview={preview}
+          error={dropzoneError}
+          onFiles={handleFiles}
+        />
+        <section aria-label="Resultado da compressão" className="space-y-6">
+          {compressed ? (
+            <>
+              <ImagePreview
+                src={`data:image/${compressed.format};base64,${compressed.data}`}
+                alt="Imagem comprimida"
+              />
+              <CompressionResultCard result={compressed} onDownload={download} />
+            </>
+          ) : (
+            <ImagePreview src="" alt="Resultado" />
+          )}
+        </section>
+      </div>
+
+      <Card className="space-y-5">
+        <CompressionSettings onRemove={() => setDropzoneError(null)} />
         <QualityControl />
         <FormatSelector />
+      </Card>
 
-        <Button
-          onClick={compress}
-          disabled={loading || !file}
-          className="w-full"
-        >
-          {loading ? "Comprimindo..." : "Comprimir Imagem"}
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        {compressed ? (
-          <>
-            <ImagePreview
-              src={`data:image/${compressed.format};base64,${compressed.data}`}
-              alt="Comprimida"
-            />
-            <CompressionResultCard
-              result={compressed}
-              onDownload={download}
-            />
-          </>
-        ) : (
-          <ImagePreview src="" alt="Resultado" />
-        )}
-      </div>
+      <Button
+        onClick={compress}
+        disabled={loading || !file}
+        size="lg"
+        className="w-full"
+      >
+        {loading ? "Comprimindo..." : "Comprimir Imagem"}
+      </Button>
     </div>
   );
 }

@@ -6,15 +6,16 @@ import { useCompressorStore } from "@/lib/store/compressor-store";
 import { usePdfStore } from "@/lib/store/pdf-store";
 import { CompressMode } from "./compress-mode.widget";
 
-const PdfMode = dynamic(
-  () => import("./pdf-mode.widget").then((m) => m.PdfMode),
+const PdfGenerator = dynamic(
+  () => import("./pdf-generator.widget").then((m) => m.PdfGenerator),
   {
     loading: () => (
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div className="flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-zinc-200 bg-white">
-            <p className="text-sm text-zinc-500">Carregando ferramenta de PDF...</p>
-          </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-surface-muted sm:h-64">
+          <p className="text-sm text-text-subtle">Carregando ferramenta de PDF...</p>
+        </div>
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border-2 border-dashed border-border-strong bg-surface-muted sm:h-64">
+          <p className="sr-only">Carregando resultado...</p>
         </div>
       </div>
     ),
@@ -27,15 +28,15 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
   return (
     <fieldset className="mb-6">
       <legend className="sr-only">Selecione a ferramenta</legend>
-      <div className="flex overflow-hidden rounded-lg border border-zinc-300">
+      <div className="flex gap-1 rounded-xl border border-border bg-surface-muted p-1">
         <button
           type="button"
           aria-pressed={mode === "compress"}
           onClick={() => onChange("compress")}
-          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+          className={`flex flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 ${
             mode === "compress"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-zinc-700 hover:bg-zinc-100"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-text-muted hover:bg-surface hover:text-text"
           }`}
         >
           Compressor
@@ -44,10 +45,10 @@ function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
           type="button"
           aria-pressed={mode === "pdf"}
           onClick={() => onChange("pdf")}
-          className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
+          className={`flex flex-1 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-1 ${
             mode === "pdf"
-              ? "bg-blue-600 text-white"
-              : "bg-white text-zinc-700 hover:bg-zinc-100"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-text-muted hover:bg-surface hover:text-text"
           }`}
         >
           PDF
@@ -73,7 +74,7 @@ export function ToolSwitcher() {
   return (
     <>
       <ModeToggle mode={mode} onChange={handleModeChange} />
-      {mode === "compress" ? <CompressMode /> : <PdfMode />}
+      {mode === "compress" ? <CompressMode /> : <PdfGenerator />}
     </>
   );
 }

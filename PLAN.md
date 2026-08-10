@@ -705,9 +705,9 @@ Fechamento dos resíduos: majors TS 7 / ESLint 10 reavaliados com upgrade real (
 
 ---
 
-## 🎨 Roadmap de Modernização de UI (`UI-PLAN.md`) — em andamento desde 07/08/2026
+## 🎨 Roadmap de Modernização de UI (`UI-PLAN.md`) — ✅ 100% concluído em 10/08/2026
 
-> Novo roadmap, separado do plano técnico acima. Escopo: **modernizar a UI mantendo business logic, contratos de API, funcionalidades, stack (Next.js, TypeScript, Tailwind) — sem adicionar dependências**. Mobile-first. Cada fase é executada, validada e documentada aqui antes de avançar (workflow exigido pelo usuário). Conversa e documentação em **pt-BR**.
+> Novo roadmap, separado do plano técnico acima. Escopo: **modernizar a UI mantendo business logic, contratos de API, funcionalidades, stack (Next.js, TypeScript, Tailwind) — sem adicionar dependências**. Mobile-first. Cada fase é executada, validada e documentada aqui antes de avançar (workflow exigido pelo usuário). Conversa e documentação em **pt-BR**. **Status final: 8/8 fases executadas, validadas e documentadas (Fase 8 — Final Validation — concluída em 10/08/2026).**
 
 ## 1️⃣ Fase 1 — Foundation (concluída em 07/08/2026)
 
@@ -1113,8 +1113,71 @@ Revisão automatizada sobre o diff da Fase 3 (commit `16715b5`). **BLOCKER: nenh
 
 **Resumo:** auditoria responsiva 320→1920px — layout mobile-first já cobria todos os breakpoints (grades flexíveis, empilhamento vertical, `truncate`+`min-w-0`, capping em 896px). Corrigida a única falha de polish no piso de 320–430px: a linha de contagem de imagens + "Limpar todas" agora usa `flex-wrap`, evitando a quebra em 3 linhas. Nenhuma regressão funcional. **Fase 7 concluída — base pronta para a Fase 8 (Final Validation).**
 
-### Próximos passos (Fase 8 — Final Validation)
+## 8️⃣ Fase 8 — Final Validation (concluída em 10/08/2026)
 
-1. Re-auditoria geral: CSS final, SSR, rotas estáticas/dinâmicas, contratos de API.
-2. Regressão completa: lint, typecheck, testes (57), build e smoke do servidor de produção.
-3. Checklist final do `UI-PLAN.md` (todas as 8 fases) e atualização do status das fases no `PLAN.md`.
+> Escopo do `UI-PLAN.md` (Fase 8): re-auditoria geral (CSS final, SSR, rotas estáticas/dinâmicas, contratos de API), regressão completa (lint, typecheck, testes, build) e smoke do servidor de produção, checklist final das 8 fases e atualização do status no `PLAN.md`. Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Re-auditoria geral
+
+| Área | Verificação | Resultado |
+|---|---|---|
+| **Resíduos de cor** | Classes `zinc-*`/`blue-*`/`green-*`/`red-*`/`amber-*`/`gray-*` em `src/**/*.tsx` | ✅ Zero — todo o UI migrado para tokens semânticos (Fase 3/4) |
+| **Resíduos de ARIA** | `role="tab"`/`role="radio"`/`role="radiogroup"`/`role="tablist"` restantes | ✅ Zero — segmented control `aria-pressed` + `RadioGroup` nativos (Fase 4 técnica) |
+| **`any`** | `: any`/`<any>`/`as any` em `src` | ✅ Zero — strict TS mantido |
+| **Emojis** | 🖼️/📁/📄/⚠️ em componentes e páginas | 🐛 **1 residual corrigido nesta fase:** `error.tsx` ainda usava o emoji `⚠️` (decisão "Emoji → SVG" da Fase 3 não tinha alcançado o error boundary). Substituído pelo novo `AlertIcon` (SVG stroke `currentColor`, `aria-hidden`) em tile `bg-error-muted text-error-strong`, coerente com o sistema de ícones e com a linguagem de estado de erro das Fases 3/6 |
+| **`TODO`/`FIXME`** | Marcadores pendentes em `src` | ✅ Zero |
+| **CSS final** | Tokens `:root`, `@theme inline`, `.container-app`, `.range-input`, bloco `prefers-reduced-motion` no bundle | ✅ Presentes (tree-shaking do Tailwind v4 emitindo só utilitários usados) |
+| **SSR** | Shell estático no HTML servido (header, tabs, slider `--fill`, CTA `aria-busy="false"`), `theme-color`, `og:image`/`twitter:image` absolutos | ✅ Confirmado via `curl` no servidor de produção |
+| **Contratos de API** | `POST /api/compress` (`success`, `originalSize`, `compressedSize`, `compressionRatio`, `format`, `filename`, `data`), `POST /api/pdf` (`data`, `filename`, `pageCount`, `size`), `GET` → 405, erros 400 com mensagem, 429 + `Retry-After`, headers `Cache-Control: no-store` + `X-Content-Type-Options: nosniff` | ✅ Inalterados |
+| **Rotas estáticas** | `/robots.txt`, `/sitemap.xml`, `/opengraph-image`, `/twitter-image` | ✅ 200 com conteúdo válido |
+| **Bug fix `a8eed00`** | Timer do sucesso transitório do CTA (limpo ao iniciar nova operação) presente nos dois fluxos | ✅ Confirmado em `compress-mode.widget.tsx:33-44` e `pdf-generator.widget.tsx:50-61` |
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` | ✅ 200 — SSR com `range-input` e `--fill:77.77…%`, `aria-busy="false"`, h2 `sr-only`, landmarks, **zero emojis** no HTML servido |
+| `GET /robots.txt` · `GET /sitemap.xml` | ✅ 200 — URLs via `SITE_URL` (env) |
+| `GET /opengraph-image` · `GET /twitter-image` | ✅ 200 — `image/png`, 30.7 KB cada |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}`, ratio 55.1% |
+| `POST /api/compress` (PNG → png, lossless) | ✅ 200 `{success:true}` |
+| `POST /api/compress` (PNG → jpeg, q85) | ✅ 200 `{success:true}` |
+| `POST /api/compress` (WebP → jpeg) | ✅ 200 `{success:true}` (com `type=image/webp` explícito) |
+| `POST /api/compress` (AVIF → webp / avif) | ✅ 200 `{success:true}` (com `type=image/avif` explícito) |
+| `POST /api/compress` (arquivo 11 MB) | ✅ 400 `"Arquivo muito grande. Máximo: 10MB"` |
+| `POST /api/compress` (MIME falsificado `fake.png`) | ✅ 400 `"Arquivo inválido. O conteúdo não corresponde a uma imagem válida"` |
+| `POST /api/pdf` (PNG + WebP, A4, "relatorio final") | ✅ 200 — `filename: "relatorio_final.pdf"`, `pageCount: 2`, PDF válido (`%PDF-`, 10.9 KB) |
+| `POST /api/pdf` (AVIF, original) | ✅ 200 — `pageCount: 1`, PDF válido |
+| `POST /api/pdf` (WebP, A4) | ✅ 200 — `pageCount: 1` |
+| `POST /api/pdf` (MIME falsificado `fake.png`) | ✅ 400 `"fake.png: Arquivo inválido..."` — nome do arquivo na resposta |
+| `POST /api/pdf` (`text/plain`) | ✅ 400 `"Formato não suportado: text/plain..."` |
+| `POST /api/pdf` (sem arquivos) | ✅ 400 `"Nenhuma imagem enviada"` |
+| `GET /api/compress` · `GET /api/pdf` | ✅ 405 `"Método não permitido"` |
+| Rate limit (35 req em sequência) | ✅ 200×19 → **429×16** + header `Retry-After: 6` (orçamento compartilhado de 30/min por IP; os requests de teste anteriores consumiram parte da janela) |
+
+### 📌 Notas e decisões
+
+1. **Resíduo emoji no `error.tsx`:** única correção de código da Fase 8. O `error.tsx` fica em `src/app/` (não em `components/`) e estava fora do escopo das verificações "Emoji → SVG" das Fases 3–4, que cobriam os componentes do workspace (`components/widgets`, `components/layout`, `components/ui`). A varredura global da Fase 8 (`rg` sobre `src/`) o alcançou. O novo `AlertIcon` segue o padrão do `icons.ui.tsx` (SVG stroke `currentColor`, `aria-hidden`) e o tile colorido `bg-error-muted text-error-strong` reutiliza os tokens de erro validados por contraste na Fase 6 (6.79:1).
+2. **Limitação do curl 8.7.1 (não é bug da app):** o curl do macOS não infere `image/webp`/`image/avif` a partir da extensão — envia `application/octet-stream`, que a validação rejeita com 400. Com `;type=image/webp`/`;type=image/avif` explícito, ambos passam (200). O browser (cliente real) envia o MIME correto; nenhum fluxo é afetado.
+3. **Ratios negativos nos testes (AVIF→webp −6.1%, WebP→jpeg −2.1%):** esperado e correto — as imagens de teste têm ~1–2.6 KB (flat solid + círculo); formatos com overhead fixo podem "crescer" imagens minúsculas. Não é regressão; a app preserva o comportamento de compressão real para imagens do mundo real.
+4. **Rate limit em dev:** os 429s começaram no request 20 (e não 31) porque os testes anteriores de compressão/PDF no mesmo IP já haviam consumido parte da janela de 30/min. Comportamento correto do limiter combinado compartilhado.
+5. **Sem mudança de lógica:** stores, hooks, rotas, contratos e testes intocados (exceto a adição do `AlertIcon` + uso no `error.tsx`).
+
+### 📋 Checklist final do `UI-PLAN.md`
+
+| Fase | Escopo | Status |
+|---|---|---|
+| **1 — Foundation** | Config Tailwind (v4 CSS-first), tokens semânticos, `.container-app`, fonte Geist, breakpoints | ✅ concluída em 07/08/2026 |
+| **2 — Application Shell** | Header/Footer extraídos (RSC), containers unificados, ritmo vertical global | ✅ concluída em 07/08/2026 |
+| **3 — Core Workspace** | Mode switcher, dropzone, result panel, layout desktop/mobile, tokens no workspace | ✅ concluída em 07/08/2026 |
+| **4 — Controls** | Quality slider customizado, format selector responsivo, primary CTA com spinner/sucesso | ✅ concluída em 07/08/2026 |
+| **5 — UX States** | Auditoria dos 9 estados + reduced-motion global, CTA success verde, slider disabled | ✅ concluída em 07/08/2026 |
+| **6 — Accessibility** | WCAG 2.2 AA: contraste (success/error/danger), targets 24×24, headings `sr-only` | ✅ concluída em 07/08/2026 |
+| **7 — Responsive QA** | Breakpoints 320→1920px, `flex-wrap` na linha de contagem do PDF | ✅ concluída em 07/08/2026 |
+| **8 — Final Validation** | Re-auditoria, regressão completa, smoke do servidor de produção, resíduo emoji corrigido | ✅ concluída em 10/08/2026 |
+
+**Roadmap do `UI-PLAN.md` 100% executado (8/8 fases).** O objetivo declarado no plano — interface mais moderna, coesa, mobile-first, com estados polidos e acessível (WCAG 2.2 AA) sem regressão funcional, mudança de business logic ou stack — foi atingido.

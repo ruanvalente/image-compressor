@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui";
+import { AlertIcon, Button } from "@/components/ui";
 
 export default function Error({
   error,
@@ -17,8 +17,11 @@ export default function Error({
   return (
     <div className="container-app flex flex-col items-center py-16 text-center">
       <div className="flex max-w-md flex-col items-center gap-4">
-        <p className="text-4xl" aria-hidden="true">
-          ⚠️
+        <p
+          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-error-muted text-error-strong"
+          aria-hidden="true"
+        >
+          <AlertIcon className="h-7 w-7" />
         </p>
         <h1 className="text-xl font-bold text-text">Algo deu errado</h1>
         <p className="text-sm text-text-muted">

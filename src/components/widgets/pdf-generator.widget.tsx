@@ -49,10 +49,13 @@ export function PdfGenerator() {
 
   const handleGenerate = useCallback(async () => {
     setActionState("idle");
+    if (successTimer.current) {
+      clearTimeout(successTimer.current);
+      successTimer.current = null;
+    }
     const ok = await generate();
     if (ok) {
       setActionState("success");
-      if (successTimer.current) clearTimeout(successTimer.current);
       successTimer.current = setTimeout(() => setActionState("idle"), 2500);
     }
   }, [generate]);

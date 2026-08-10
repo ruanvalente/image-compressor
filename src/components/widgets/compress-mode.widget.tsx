@@ -32,10 +32,13 @@ export function CompressMode() {
 
   const handleCompress = useCallback(async () => {
     setActionState("idle");
+    if (successTimer.current) {
+      clearTimeout(successTimer.current);
+      successTimer.current = null;
+    }
     const ok = await compress();
     if (ok) {
       setActionState("success");
-      if (successTimer.current) clearTimeout(successTimer.current);
       successTimer.current = setTimeout(() => setActionState("idle"), 2500);
     }
   }, [compress]);

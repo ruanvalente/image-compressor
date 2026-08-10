@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePdfStore } from "@/lib/store/pdf-store";
 import { usePdfGeneration } from "@/hooks";
@@ -10,6 +10,8 @@ import {
   RadioGroup,
   EmptyState,
   DocumentIcon,
+  CheckIcon,
+  SpinnerIcon,
   ChevronUpIcon,
   ChevronDownIcon,
   XIcon,
@@ -35,6 +37,25 @@ export function PdfGenerator() {
   const setPageSize = usePdfStore((s) => s.setPageSize);
   const reset = usePdfStore((s) => s.reset);
   const { generate, download, isLoading } = usePdfGeneration();
+  const [actionState, setActionState] = useState<"idle" | "success">("idle");
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (successTimer.current) clearTimeout(successTimer.current);
+    },
+    [],
+  );
+
+  const handleGenerate = useCallback(async () => {
+    setActionState("idle");
+    const ok = await generate();
+    if (ok) {
+      setActionState("success");
+      if (successTimer.current) clearTimeout(successTimer.current);
+      successTimer.current = setTimeout(() => setActionState("idle"), 2500);
+    }
+  }, [generate]);
 
   const handleFiles = useCallback((newFiles: File[]) => {
     const store = usePdfStore.getState();
@@ -98,6 +119,7 @@ export function PdfGenerator() {
 
   return (
     <div className="space-y-6">
+      <h2 className="sr-only">Ferramenta de geração de PDF</h2>
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <FileDropzone multiple onFiles={handleFiles} />
         <section aria-label="Resultado do PDF" className="space-y-6">
@@ -122,10 +144,11 @@ export function PdfGenerator() {
               options={PAGE_SIZE_OPTIONS}
               value={pageSize}
               onChange={setPageSize}
+              disabled={isLoading}
             />
 
             <div className="border-t border-border pt-5">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <p className="text-sm font-medium text-text">
                   {files.length} {files.length === 1 ? "imagem" : "imagens"}{" "}
                   selecionada{files.length !== 1 ? "s" : ""}{" "}
@@ -211,12 +234,26 @@ export function PdfGenerator() {
           </Card>
 
           <Button
-            onClick={generate}
+            onClick={handleGenerate}
             disabled={isLoading}
             size="lg"
             className="w-full"
+            aria-busy={isLoading}
+            variant={actionState === "success" ? "success" : "primary"}
           >
-            {isLoading ? "Gerando PDF..." : "Gerar PDF"}
+            {isLoading ? (
+              <>
+                <SpinnerIcon className="h-4 w-4" />
+                Gerando PDF...
+              </>
+            ) : actionState === "success" ? (
+              <>
+                <CheckIcon className="h-4 w-4" />
+                PDF Gerado
+              </>
+            ) : (
+              "Gerar PDF"
+            )}
           </Button>
         </>
       )}

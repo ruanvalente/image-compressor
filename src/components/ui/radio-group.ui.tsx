@@ -10,6 +10,7 @@ interface RadioGroupProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   hint?: string;
+  disabled?: boolean;
   className?: string;
 }
 
@@ -20,7 +21,8 @@ export function RadioGroup<T extends string>({
   value,
   onChange,
   hint,
-  className = "",
+  disabled = false,
+  className = "flex flex-wrap gap-2",
 }: RadioGroupProps<T>) {
   const hintId = `${name}-hint`;
 
@@ -29,7 +31,7 @@ export function RadioGroup<T extends string>({
       <legend className="mb-2 block text-sm font-medium text-text">
         {legend}
       </legend>
-      <div className={`flex gap-2 ${className}`}>
+      <div className={className}>
         {options.map((opt) => (
           <label key={opt.value} className="relative flex-1 cursor-pointer">
             <input
@@ -38,10 +40,11 @@ export function RadioGroup<T extends string>({
               value={opt.value}
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
+              disabled={disabled}
               aria-describedby={hint ? hintId : undefined}
               className="peer sr-only"
             />
-            <span className="flex items-center justify-center rounded-lg border border-border bg-surface py-3 px-4 text-base font-medium text-text transition-colors hover:border-border-strong hover:bg-surface-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2">
+            <span className="flex w-full items-center justify-center rounded-lg border border-border bg-surface px-4 py-3 text-base font-medium text-text transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-focus peer-focus-visible:ring-offset-2 peer-enabled:hover:border-border-strong peer-enabled:hover:bg-surface-muted peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
               {opt.label}
             </span>
           </label>

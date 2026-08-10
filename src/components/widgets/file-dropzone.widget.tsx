@@ -88,10 +88,10 @@ export function FileDropzone({
       </span>
       {error ? (
         <div className="px-6 text-center">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error-muted text-error">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error-muted text-error-strong">
             <XIcon className="h-6 w-6" />
           </span>
-          <p id={errorId} role="alert" className="mt-3 text-sm font-medium text-error">
+          <p id={errorId} role="alert" className="mt-3 text-sm font-medium text-error-strong">
             {error}
           </p>
           <p className="mt-0.5 text-xs text-text-muted">{subHint}</p>

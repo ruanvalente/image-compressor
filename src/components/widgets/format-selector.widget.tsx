@@ -6,9 +6,13 @@ import { COMPRESS_FORMATS } from "@/lib/constants";
 
 export function FormatSelector() {
   const format = useCompressorStore((s) => s.settings.format);
+  const loading = useCompressorStore((s) => s.loading);
   const setSettings = useCompressorStore((s) => s.setSettings);
 
-  const options = COMPRESS_FORMATS.map((f) => ({ value: f, label: f }));
+  const options = COMPRESS_FORMATS.map((f) => ({
+    value: f,
+    label: f.toUpperCase(),
+  }));
 
   return (
     <RadioGroup
@@ -18,6 +22,8 @@ export function FormatSelector() {
       options={options}
       value={format}
       onChange={(value) => setSettings({ format: value })}
+      disabled={loading}
+      className="grid grid-cols-2 gap-2 sm:grid-cols-4"
     />
   );
 }

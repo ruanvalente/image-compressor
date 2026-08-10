@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCompressorStore } from "@/lib/store/compressor-store";
 import { useImageCompression } from "@/hooks";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, CheckIcon, SpinnerIcon } from "@/components/ui";
 import { toast } from "@/lib/utils/toast";
 import { MAX_COMPRESS_FILE_SIZE } from "@/lib/constants";
 import { FileDropzone } from "./file-dropzone.widget";
@@ -20,6 +20,25 @@ export function CompressMode() {
   const loading = useCompressorStore((s) => s.loading);
   const { compress, download } = useImageCompression();
   const [dropzoneError, setDropzoneError] = useState<string | null>(null);
+  const [actionState, setActionState] = useState<"idle" | "success">("idle");
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (successTimer.current) clearTimeout(successTimer.current);
+    },
+    [],
+  );
+
+  const handleCompress = useCallback(async () => {
+    setActionState("idle");
+    const ok = await compress();
+    if (ok) {
+      setActionState("success");
+      if (successTimer.current) clearTimeout(successTimer.current);
+      successTimer.current = setTimeout(() => setActionState("idle"), 2500);
+    }
+  }, [compress]);
 
   const handleFiles = useCallback((files: File[]) => {
     const selected = files[0];
@@ -62,6 +81,7 @@ export function CompressMode() {
 
   return (
     <div className="space-y-6">
+      <h2 className="sr-only">Ferramenta de compressão de imagens</h2>
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <FileDropzone
           preview={preview}
@@ -90,12 +110,26 @@ export function CompressMode() {
       </Card>
 
       <Button
-        onClick={compress}
+        onClick={handleCompress}
         disabled={loading || !file}
         size="lg"
         className="w-full"
+        aria-busy={loading}
+        variant={actionState === "success" ? "success" : "primary"}
       >
-        {loading ? "Comprimindo..." : "Comprimir Imagem"}
+        {loading ? (
+          <>
+            <SpinnerIcon className="h-4 w-4" />
+            Comprimindo...
+          </>
+        ) : actionState === "success" ? (
+          <>
+            <CheckIcon className="h-4 w-4" />
+            Imagem Comprimida
+          </>
+        ) : (
+          "Comprimir Imagem"
+        )}
       </Button>
     </div>
   );

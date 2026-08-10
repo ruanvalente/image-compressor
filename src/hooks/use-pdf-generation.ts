@@ -7,13 +7,13 @@ import { base64ToBlob } from "@/lib/utils/base64";
 import type { PdfResult } from "@/lib/types";
 
 export function usePdfGeneration() {
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (): Promise<boolean> => {
     const store = usePdfStore.getState();
     if (store.files.length === 0) {
       toast.warning("Nenhuma imagem selecionada", {
         description: "Adicione pelo menos uma imagem para gerar o PDF",
       });
-      return;
+      return false;
     }
 
     store.setLoading(true);
@@ -37,6 +37,7 @@ export function usePdfGeneration() {
 
       usePdfStore.getState().setResult(data as PdfResult);
       toast.success("PDF gerado com sucesso!");
+      return true;
     } catch (e) {
       if (e instanceof TypeError) {
         toast.error("Falha de conexão", {
@@ -45,6 +46,7 @@ export function usePdfGeneration() {
       } else {
         toast.error(e instanceof Error ? e.message : "Falha ao gerar PDF");
       }
+      return false;
     } finally {
       usePdfStore.getState().setLoading(false);
     }

@@ -11,6 +11,7 @@ export {
   ImageIcon,
   DocumentIcon,
   CheckIcon,
+  SpinnerIcon,
   XIcon,
   ChevronUpIcon,
   ChevronDownIcon,

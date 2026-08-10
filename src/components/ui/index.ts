@@ -15,4 +15,5 @@ export {
   XIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  AlertIcon,
 } from "./icons.ui";

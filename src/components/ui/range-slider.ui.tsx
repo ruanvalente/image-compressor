@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef, useId } from "react";
+import { CSSProperties, InputHTMLAttributes, forwardRef, useId } from "react";
 
 interface RangeSliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string;
@@ -7,10 +7,15 @@ interface RangeSliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "
 }
 
 export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
-  ({ label, showValue = true, valueFormat, className = "", value, ...props }, ref) => {
+  ({ label, showValue = true, valueFormat, className = "", value, min = 0, max = 100, ...props }, ref) => {
     const generatedId = useId();
     const inputId = props.id || generatedId;
-    const displayValue = valueFormat ? valueFormat(Number(value)) : `${value}%`;
+    const numericValue = Number(value);
+    const displayValue = valueFormat ? valueFormat(numericValue) : `${value}%`;
+    const fillPercent = ((numericValue - Number(min)) / (Number(max) - Number(min))) * 100;
+    const fillStyle = {
+      "--fill": `${Math.min(100, Math.max(0, fillPercent))}%`,
+    } as CSSProperties;
 
     return (
       <div>
@@ -32,12 +37,15 @@ export const RangeSlider = forwardRef<HTMLInputElement, RangeSliderProps>(
           id={inputId}
           type="range"
           value={value}
-          className={`w-full accent-primary ${className}`}
+          min={min}
+          max={max}
+          style={fillStyle}
+          className={`range-input w-full ${className}`}
           {...props}
           aria-label={label ? undefined : props["aria-label"]}
-          aria-valuemin={Number(props.min || 0)}
-          aria-valuemax={Number(props.max || 100)}
-          aria-valuenow={Number(value)}
+          aria-valuemin={Number(min)}
+          aria-valuemax={Number(max)}
+          aria-valuenow={numericValue}
           aria-valuetext={displayValue}
         />
       </div>

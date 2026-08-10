@@ -8,13 +8,13 @@ import { COMPRESS_MIME_TYPES } from "@/lib/constants";
 import type { CompressionResult } from "@/lib/types";
 
 export function useImageCompression() {
-  const compress = useCallback(async () => {
+  const compress = useCallback(async (): Promise<boolean> => {
     const store = useCompressorStore.getState();
     if (!store.file) {
       toast.warning("Nenhum arquivo selecionado", {
         description: "Selecione uma imagem para comprimir",
       });
-      return;
+      return false;
     }
 
     store.setLoading(true);
@@ -40,6 +40,7 @@ export function useImageCompression() {
 
       useCompressorStore.getState().setCompressed(data as CompressionResult);
       toast.success("Imagem comprimida com sucesso!");
+      return true;
     } catch (e) {
       if (e instanceof TypeError) {
         toast.error("Falha de conexão", {
@@ -50,6 +51,7 @@ export function useImageCompression() {
           e instanceof Error ? e.message : "Falha ao comprimir imagem",
         );
       }
+      return false;
     } finally {
       useCompressorStore.getState().setLoading(false);
     }

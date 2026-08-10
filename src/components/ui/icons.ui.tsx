@@ -62,6 +62,28 @@ export function DocumentIcon({ className }: IconProps) {
   );
 }
 
+export function SpinnerIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={`motion-safe:animate-spin ${className}`}
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray="56"
+        strokeDashoffset="22"
+      />
+    </svg>
+  );
+}
+
 export function CheckIcon({ className }: IconProps) {
   return (
     <IconBase className={className}>

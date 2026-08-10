@@ -877,3 +877,244 @@ Revisão automatizada sobre o diff da Fase 3 (commit `16715b5`). **BLOCKER: nenh
 2. Revisar o format selector (`RadioGroup`) — estados disabled e consistência dos chips.
 3. Redesenhar a primary CTA — spinner no loading, estados success/error.
 4. Implementar estados de interação consistentes (loading/success/error) em todos os controles.
+
+---
+
+## 4️⃣ Fase 4 — Controls (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 4): redesenhar o quality slider (§7), o output format selector (§8) e a primary CTA (§9), implementando estados de interação consistentes (loading/success/error/disabled). Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Execução
+
+| Item | Situação | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **Quality slider** | `RangeSlider` usava o `<input type="range">` nativo com `accent-primary` — track fino e thumb pequeno dependente do browser, sem linguagem visual própria | **Track/thumb customizados** via classe `.range-input` em `@layer components`: track de 6px `rounded-full` com **preenchimento progressivo** (`--fill` calculado no componente → gradiente `primary → border` no WebKit, `::-moz-range-progress` no Firefox), thumb de 20px `bg-primary` com borda `3px` da surface e sombra sutil, hover → `--primary-hover`, active → `--primary-active`, **foco por teclado** com anel duplo `--surface` + `--focus` (sem anel no mouse), `prefers-reduced-motion` desliga a transição do thumb. Label + badge do valor em `bg-primary-muted` preservados; `aria-valuemin/max/now/text` derivados mantidos | `range-slider.ui.tsx`, `globals.css` |
+| **Format selector** | Chips com label minúsculo (`jpeg`), layout `flex` fixo (4 chips esticados em linha podiam apertar a 320px) e **sem estado disabled** | Labels em **maiúsculas** (`JPEG`/`PNG`/`WEBP`/`AVIF` — UI-PLAN §8); layout responsivo via **grid `grid-cols-2 sm:grid-cols-4`** (2×2 no mobile, 4 em coluna a partir de 640px); **prop `disabled`** no `RadioGroup` — inputs nativos desabilitados, chips com `peer-disabled:opacity-50` + `cursor-not-allowed` e hover suprimido com `peer-enabled:hover:*` (hover só quando habilitado). Format selector **desabilita durante o loading** (impede trocar formato no meio da compressão) | `radio-group.ui.tsx`, `format-selector.widget.tsx` |
+| **Primary CTA (compressão)** | Botão mostrava só texto "Comprimindo..." no loading; **sem feedback de sucesso no botão** (dependia só do toast + result card) | **Spinner SVG** (`SpinnerIcon`, arco `stroke-dasharray` com `motion-safe:animate-spin` — não gira com `prefers-reduced-motion`) ao lado de "Comprimindo..."; **estado de sucesso transitório** "✓ Imagem Comprimida" por 2,5s após sucesso; `aria-busy={loading}` no botão (SR anuncia processamento). Hooks retornam `boolean` (`true` só em sucesso) para orquestrar o estado transitório | `icons.ui.tsx` (novo `SpinnerIcon`), `use-image-compression.ts`, `compress-mode.widget.tsx` |
+| **Primary CTA (PDF)** | Mesmo padrão do compressor | Spinner em "Gerando PDF...", sucesso transitório "✓ PDF Gerado" por 2,5s, `aria-busy`; `RadioGroup` do tamanho de página **desabilitado durante `isLoading`** | `use-pdf-generation.ts`, `pdf-generator.widget.tsx` |
+| **Estados consistentes** | Disabled/Carregando/Sucesso eram tratados de forma diferente entre os controles | Padrão único nos dois fluxos: CTA com loading (spinner + texto) → success transitório → idle; controles desabilitados enquanto processam; erro já tratado por toast + erro inline do dropzone (Fase 3) | `compress-mode.widget.tsx`, `pdf-generator.widget.tsx` |
+
+### 📌 Notas e decisões
+
+1. **`--fill` calculado no componente:** o `RangeSlider` calcula `((value - min) / (max - min)) * 100` e o injeta como variável CSS `--fill`. O WebKit usa um `linear-gradient` sobre o track (parte preenchida em `primary`, resto em `border`); o Firefox usa `::-moz-range-progress` nativo. Resultado idêntico nos dois engines, zero JS extra.
+2. **Thumb 20px + track 6px:** mantém o `input` com `height: 1.5rem` (área de toque ≥ 24px dentro do componente; o `py-3` do label e o `mb-2` preservam o conforto de toque do bloco). O `margin-top` do thumb WebKit é `calc((0.375rem - 1.25rem) / 2)` para centralizá-lo no track.
+3. **Foco do slider só por teclado:** o anel `:focus-visible` estiliza o thumb (anel duplo surface + `--focus`); clicar/arrastar não mostra anel — convenção de foco da Fase 1 (WCAG 2.4.7). O `:active` usa `--primary-active` para feedback de arrasto.
+4. **Grid responsivo do formato:** `grid-cols-2 sm:grid-cols-4` (não `flex-wrap`) — decisão explícita: 4 chips em linha a 320px ficariam < 66px cada com `px-4 text-base` (apertado); em 2×2 os chips ficam confortáveis. A partir de `sm` (640px) os 4 cabem em linha. O `RadioGroup` do PDF (3 opções) mantém o layout flex default esticado.
+5. **Disabled com `peer-enabled:hover`:** o hover dos chips era incondicional; com `disabled`, hover visual enganaria. Troquei para `peer-enabled:hover:*` (só aplica quando o input está habilitado) + `peer-disabled:opacity-50`/`cursor-not-allowed`. `fieldset` sem opacity extra (evita dimming duplo com o chip).
+6. **`SpinnerIcon` respeita `prefers-reduced-motion`:** `motion-safe:animate-spin` só anima quando o usuário permite animação; em modo reduzido o spinner fica estático (o texto "Comprimindo.../Gerando PDF..." continua comunicando o estado).
+7. **Sucesso transitório no CTA:** 2,5s com `setTimeout` guardado em `useRef` e limpo no unmount (`useEffect` cleanup) — sem vazamento. `actionState` volta a `idle` ao iniciar nova operação. O feedback de sucesso duplica propositalmente o toast + result card: o botão (foco do usuário) confirma o resultado sem exigir mover o olhar para o painel.
+8. **Hooks retornam `Promise<boolean>`:** `compress`/`generate` agora retornam `true` apenas no sucesso (e `false` em erro/validação). Sem efeito colateral nos consumidores — só o `CompressMode`/`PdfGenerator` usam o retorno. `loading` continua resetado no `finally` (Fase 1 técnica).
+9. **Nenhuma mudança de lógica:** stores, rotas, contratos de API, validações e testes intocados. Mudanças de comportamento: labels do formato em maiúsculas, controles desabilitados durante o processamento e feedback visual de sucesso no CTA.
+
+### 🔍 Verificação pós-build
+
+- **CSS final contém** `.range-input` completo (track WebKit+Firefox, thumb, hover/active, `:focus-visible`, `prefers-reduced-motion`) e o `motion-safe:animate-spin` emitido pelo `SpinnerIcon`.
+- **SSR do `/`:** slider renderiza `class="range-input w-full"` com `style="--fill:77.7…%"` e `aria-valuetext="80%"`; chips do formato em `JPEG/PNG/WEBP/AVIF` com `grid grid-cols-2 gap-2 sm:grid-cols-4`; CTA com `aria-busy="false"` (loading false no SSR).
+- Nenhuma classe de cor hardcoded nova; tudo via tokens semânticos.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — slider customizado com `--fill`, chips em maiúsculas com grid responsivo, `aria-busy="false"` |
+| `POST /api/compress` (PNG → webp, q80) | ✅ 200 `{success:true}` |
+| `POST /api/compress` (PNG → png, lossless) | ✅ 200 `{success:true}` |
+| `POST /api/pdf` (1 imagem, A4, "relatorio final") | ✅ 200 — PDF válido (`%PDF-`) |
+
+**Resumo:** controls redesenhados e com estados consistentes — slider com track/thumb customizado e preenchimento progressivo (§7), format selector com labels em maiúsculas, grid responsivo 2×2→4 e estado disabled durante o processamento (§8), e primary CTA com spinner (que respeita `prefers-reduced-motion`), sucesso transitório "✓" e `aria-busy` (§9), nos dois fluxos. Nenhuma regressão funcional. **Fase 4 concluída — base pronta para a Fase 5 (UX States).**
+
+### Próximos passos (Fase 5 — UX States)
+
+1. Auditar os estados existentes: empty, hover, focus, dragging, selected, loading, success, error, disabled — em todos os componentes.
+2. Fechar lacunas (ex.: hover/focus consistentes no result card, feedback de sucesso do download, estados do PDF thumbs já tratados na Fase 3).
+3. Validar coerência visual entre os dois modos (compressão e PDF).
+
+---
+
+## 5️⃣ Fase 5 — UX States (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 5): implementar estados polished de empty, hover, focus, dragging, selected, loading, success, error e disabled. Auditoria dos estados já implementados nas Fases 3–4 + fechamento das lacunas remanescentes. Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Auditoria de estados (cobertura pós-Fase 4)
+
+| Estado | Cobertura | Componentes |
+|---|---|---|
+| **Empty** | ✅ Completo | `EmptyState` (resultado do compressor e do PDF), dropzone default, resultado vazio |
+| **Hover** | ✅ Completo | Botões, chips de formato, dropzone, thumb do slider, links do header/footer, thumbs do PDF (desktop), "Trocar imagem" |
+| **Focus** | ✅ Completo | `focus-visible` (anel `ring-focus`) em todos os controles interativos — só teclado (WCAG 2.4.7) |
+| **Dragging** | ✅ Completo | `dragActive` do dropzone (border/track `primary`), contador de profundidade (sem flicker) |
+| **Selected** | ✅ Completo | Preview + overlay "Trocar imagem", row do arquivo (`CompressionSettings`), chip checked do formato/página, CTA success |
+| **Loading** | ✅ Completo | CTA com spinner, controles desabilitados (slider, formato, página), skeleton do route loading, fallback lazy do PDF |
+| **Success** | ✅ Completo | CTA transitório "✓", toast, result cards, `Badge` de redução/PDF |
+| **Error** | ✅ Completo | Erro inline do dropzone (`role="alert"`), toasts com mensagem real do servidor, `error.tsx` com retry |
+| **Disabled** | ✅ Completo | `Button` (`disabled:opacity-50`), chips `peer-disabled`, slider `:disabled`, thumbs `disabled:opacity-30` |
+
+### ✅ Execução (lacunas fechadas)
+
+| Item | Situação | Solução aplicada | Arquivos |
+|---|---|---|---|
+| **`prefers-reduced-motion` global** | Transições (`transition-colors`/`transition-opacity`) e `animate-pulse` rodavam incondicionalmente em ~18 lugares mesmo com "reduzir movimento" ativo | Bloco global `@media (prefers-reduced-motion: reduce)` que reduz animações e transições para ~0.01ms (padrão da comunidade — cobre toda a árvore sem variante por componente) | `globals.css` |
+| **Skeletons respeitam reduced-motion** | `animate-pulse` do `loading.tsx` e do fallback lazy do PDF animava sem checagem | `motion-safe:animate-pulse` (explicito; já garantido pelo bloco global) | `loading.tsx`, `tool-switcher.widget.tsx` |
+| **Feedback de sucesso do CTA mais forte** | Estado success transitório da Fase 4 mantinha o botão azul (`primary`) — o "✓" mudava só o texto | CTA passa a `variant="success"` (fundo verde `--success`) durante os 2,5s de sucesso, com `transition-colors` suavizando a troca; retorna a `primary` ao voltar ao idle | `compress-mode.widget.tsx`, `pdf-generator.widget.tsx` |
+| **Qualidade desabilitada durante o loading** | `FormatSelector` e página do PDF já desabilitavam durante o processamento (Fase 4), mas o slider de qualidade ainda ficava ativo | `disabled={loading}` no `RangeSlider` (usa o `:disabled` customizado do `.range-input` — opacity 0.5 + `not-allowed`) — consistência total dos settings | `quality-control.widget.tsx` |
+
+### 📌 Notas e decisões
+
+1. **Abordagem global vs variantes:** a auditoria mostrou ~18 ocorrências de `transition-*`/`animate-pulse`. Aplicar `motion-safe:`/`motion-reduce:` em cada uma geraria churn e é frágil (novos componentes esqueceriam). O bloco global `prefers-reduced-motion: reduce` é a prática recomendada e cobre todo o DOM. As variantes `motion-safe:` existentes no spinner e skeletons ficam como intenção explícita (redundante com o global, mas inofensivo).
+2. **CTA verde transitório:** decisão alinhada ao UI-PLAN §9 ("Success: provide appropriate feedback"). O `Button` já tinha a variante `success`; a mudança é só de cor, sem layout shift. Em modo reduzido, o `transition-colors` fica instantâneo (bloco global) — o estado ainda é comunicado pela cor e pelo texto.
+3. **Slider disabled:** o CSS `.range-input:disabled` existia desde a Fase 4 (opacity + `cursor-not-allowed`), mas nenhum consumidor o usava. Agora o `QualityControl` o utiliza durante o processamento — mesma política dos demais settings.
+4. **Estado de erro no CTA:** mantido via toast (mensagem real do servidor) + erro inline do dropzone — sem estado de erro dedicado no botão (evita ruído; o botão volta a `idle` imediatamente após falha). Decisão documentada.
+5. **Resultado obsoleto em falha de re-compressão:** se uma nova compressão falhar, o `compressed` anterior permanece (não é limpo em erro). Intencional — evita perder um bom resultado por uma falha transitória; o toast comunica o erro.
+6. **Nenhuma mudança de lógica:** stores, hooks, rotas, contratos e testes intocados.
+
+### 🔍 Verificação pós-build
+
+- **CSS final:** bloco `prefers-reduced-motion: reduce` presente; `motion-safe:animate-pulse` e `motion-safe:animate-spin` compilados dentro de `@media (prefers-reduced-motion: no-preference)`; `.range-input:disabled` presente.
+- **SSR do `/`:** CTA renderiza com `variant` primary (idle no SSR, `aria-busy="false"`); slider sem `disabled` no SSR (loading false); nada de verde no estado inicial.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — reduced-motion global e `motion-safe` no CSS, SSR íntegro |
+| `POST /api/compress` (PNG → webp) | ✅ 200 `{success:true}` |
+| `POST /api/pdf` (1 imagem, A4) | ✅ 200 — PDF válido (`%PDF-`) |
+
+**Resumo:** auditoria dos 9 estados do UI-PLAN confirmou cobertura quase total nas Fases 3–4; lacunas fechadas — `prefers-reduced-motion` global (transições e animações respeitam a preferência do usuário em toda a árvore), skeletons com `motion-safe:animate-pulse`, feedback de sucesso verde transitório no CTA e slider de qualidade desabilitado durante o processamento (consistência total dos settings). Nenhuma regressão funcional. **Fase 5 concluída — base pronta para a Fase 6 (Accessibility).**
+
+## 6️⃣ Fase 6 — Accessibility (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 6): auditoria e correção de acessibilidade — navegação por teclado, suporte a screen reader (labels, anúncios, landmarks), contraste de cor (WCAG 2.2 AA) e tamanho de alvos de toque/clique. Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Auditoria (teclado + SR + semântica — cobertura pré-existente)
+
+| Item | Situação | Onde |
+|---|---|---|
+| **Skip link + foco programático** | ✅ Skip link "Pular para o conteúdo principal" (foco via teclado, `focus:not-sr-only`) aponta para `<main id="main-content" tabIndex={-1}>` | `layout.tsx` |
+| **Landmarks e `lang`** | ✅ `<header>` (com `<h1>`), `<main>`, `<footer>`, `<nav aria-label="Redes sociais">`; `html lang="pt-BR"` | `layout.tsx`, `header.tsx`, `footer.tsx` |
+| **Toggle de ferramenta** | ✅ `fieldset`/`legend sr-only`, `aria-pressed` nos dois botões | `tool-switcher.widget.tsx` |
+| **Dropzone** | ✅ `role="button"` + `tabIndex={0}` + `aria-label` + `aria-describedby` (hint/erro), Enter/Espaço aciona o input; `<input type="file">` com `aria-hidden` e `hidden` (fora do tab order) | `file-dropzone.widget.tsx` |
+| **Radios** | ✅ inputs `sr-only` navegáveis, foco visível via `peer-focus-visible` no chip, `aria-describedby` do hint | `radio-group.ui.tsx`, `format-selector.widget.tsx`, `pdf-generator.widget.tsx` |
+| **Slider** | ✅ `label htmlFor`, `aria-valuemin/max/now/text` (texto formatado "80%"), foco visível no thumb | `range-slider.ui.tsx` |
+| **Anúncios** | ✅ `role="alert"` no erro inline; `aria-busy` nos CTAs; toasts de sucesso/erro (Sonner) com `role="status"`; `Badge` de ordem com `sr-only` + `aria-hidden` no número | dropzone, CTAs, `pdf-generator.widget.tsx` |
+| **Dados** | ✅ `<dl>/<dt>/<dd>` nos result cards; `<ul>` com `aria-label` nos thumbs do PDF; controles dos thumbs com `aria-label` e `focus-within:opacity-100` (visíveis via teclado no desktop) | `compression-result-card.widget.tsx`, `pdf-download-card.widget.tsx`, `pdf-generator.widget.tsx` |
+| **Foco visível** | ✅ `focus-visible` (anel `ring-focus`) em todos os controles interativos — só teclado (WCAG 2.4.7) | componentes `ui` |
+| **Reduced motion** | ✅ Bloco global `prefers-reduced-motion` (Fase 5) | `globals.css` |
+
+### ✅ Execução (correções aplicadas)
+
+| Item | Achado | Taxa | Solução aplicada | Arquivos |
+|---|---|---|---|---|
+| **Contraste do botão success (texto branco)** | `--success: #16a34a` (green-600) como fundo com texto branco | **3.30:1 ✗** (< 4.5) | Token escurecido para `--success: #15803d` (green-700) | **5.01:1 ✓** | `globals.css` |
+| **Hover do botão success** | `hover:bg-success/90` (opacidade sobre fundo branco) | **3.63:1 ✗** no hover | Hover sólido `hover:bg-success-strong` (#166534) | **7.09:1 ✓** | `button.ui.tsx` |
+| **Erro inline do dropzone** | `text-error` (#dc2626) sobre `bg-error-muted` (#fee2e2) — texto `text-sm` e ícone | **3.92:1 ✗** | `text-error-strong` (#991b1b) no ícone e na mensagem | **6.79:1 ✓** | `file-dropzone.widget.tsx` |
+| **Botão danger (Remover)** | `text-error` — default sobre branco 4.79 ✓, mas **hover** sobre `bg-error-muted` | **3.92:1 ✗** no hover | `text-error-strong` (default 8.30:1 ✓, hover 6.79:1 ✓) | **✓** | `button.ui.tsx` |
+| **Target do thumb do slider** | Thumb de **20×20px** — WCAG 2.2 **2.5.8** exige ≥ **24×24** | ✗ | Thumb para **24×24px** (`1.5rem`; `margin-top` recalculado no webkit) | **✓** | `globals.css` |
+| **Target dos links sociais** | Links do footer de **20×20px** (ícone sem padding) | ✗ (< 24) | `p-2` no link → alvo 36×36px | **✓** | `footer.tsx` |
+| **Outline de headings** | Página com só `<h1>` (site); sem `<h2>` para cada ferramenta | — | `<h2 className="sr-only">` por ferramenta ("Ferramenta de compressão de imagens" / "Ferramenta de geração de PDF") — hierarquia h1→h2→legends | **✓** | `compress-mode.widget.tsx`, `pdf-generator.widget.tsx` |
+
+### 📌 Notas e decisões
+
+1. **Contraste de texto pequeno:** meta de **4.5:1** (WCAG 1.4.3 AA) para `text-sm`/`text-base` de botões e mensagens. O `text-error` (#dc2626) sobre branco (4.79:1) continua valendo onde não há `bg-error-muted` (apenas o ícone decorativo do PDF card mantém `text-error` sobre `error-muted` — 3.92:1, dentro do exigido de **3:1** para não-texto, critério 1.4.11).
+2. **`text-text-subtle` (#71717a):** medido em 4.84:1 sobre branco e **4.63:1** sobre `bg-surface-muted` — **passa** 4.5:1 nos dois casos, então nenhuma mudança foi feita (evita achatar a hierarquia de texto). Cálculo confirmado por fórmula WCAG, não por estimativa.
+3. **Verde do success:** `--success` agora é green-700 (#15803d) — passa AA com texto branco em qualquer estado. A variante `success` do `Button` (Baixar PDF/Baixar Imagem + CTA transitório) é a única consumidora do token; `success-muted`/`success-strong` (badges) não foram alterados.
+4. **Targets de toque:** aplicado o mínimo **24×24px** (WCAG 2.2 2.5.8 AA). Chips de formato (~44px), botões (`py-2.5`~40px, `size=lg` ~48px) e dropzone já superavam. O thumb do slider foi o único controle abaixo do mínimo; os links sociais do footer ganharam `p-2` (20→36px).
+5. **Headings `sr-only`:** sem mudança visual; melhora a navegação por SR (h1 site → h2 ferramenta → legends dos grupos de formulário). Coerente com o outline existente.
+6. **Nenhuma mudança de lógica:** stores, hooks, rotas, contratos e testes intocados.
+
+### 🔍 Verificação pós-build
+
+- **CSS final:** `--success: #15803d`; thumb do slider `1.5rem` (webkit `margin-top: calc((0.375rem - 1.5rem) / 2)`); reduzido o hover para cor sólida (sem `/90`).
+- **SSR do `/`:** h2 `sr-only` presente nas duas ferramentas; botões success ainda em estado idle (primary) no SSR.
+- **Semântica:** outline h1→h2 em ambas as ferramentas; landmarks inalterados; nenhum controle perdeu `focus-visible`.
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+| `GET /` (server de produção) | ✅ 200 — tokens e CSS corretos no bundle, SSR íntegro |
+| `POST /api/compress` (PNG → webp, multipart) | ✅ 200 `{success:true}` |
+| `POST /api/pdf` (1 imagem, A4, multipart) | ✅ 200 — PDF válido (`%PDF-`) |
+
+**Resumo:** auditoria WCAG 2.2 AA — a maior parte já estava em conformidade (teclado, ARIA, landmarks, `aria-busy`/`role="alert"`, reduced motion). Corrigidos: contraste do botão success (3.30→5.01:1 e hover 7.09:1), erro inline do dropzone (3.92→6.79:1), hover do botão danger (3.92→6.79:1), target do thumb do slider (20→24px, 2.5.8), target dos links sociais do footer (20→36px) e outline de headings (h2 `sr-only` por ferramenta). `text-text-subtle` validado (4.63:1 sobre `surface-muted` — passa). Nenhuma regressão funcional. **Fase 6 concluída — base pronta para a Fase 7 (Responsive QA).**
+
+## 7️⃣ Fase 7 — Responsive QA (concluída em 07/08/2026)
+
+> Escopo do `UI-PLAN.md` (Fase 7): garantir que o layout se comporte corretamente em todos os breakpoints — 320 / 375 / 390 / 430 / 768 / 1024 / 1280 / 1440 / 1920px. Auditoria estática do CSS utilitário (sem browser automation disponível no projeto) + correções pontuais de robustez no menor breakpoint. Sem mudança de business logic, contratos de API ou stack.
+
+### ✅ Auditoria de breakpoints (320 → 1920px)
+
+| Viewport | Largura de conteúdo (`container-app` 1rem/1.5rem) | Comportamento |
+|---|---|---|
+| **320** (iPhone SE 1ª geração) | 288px | ✅ Empilha tudo verticalmente; grades mínimas cabem (verificações abaixo) |
+| **375 / 390 / 430** (iPhones atuais) | 343 / 358 / 398px | ✅ Mesmo comportamento do 320 com mais folga |
+| **768** (tablet portrait) | 720px | ✅ `sm:` ativado — formatos em 4 col, thumbs em 3 col, footer em linha |
+| **1024+** (desktop) | 896px (max 56rem) | ✅ Workspace em 2 colunas (`lg:grid-cols-2`), dropzone/result lado a lado |
+| **1280 / 1440 / 1920** | 896px (centralizado) | ✅ Layout capping no `container-max` — sem esticar |
+
+### ✅ Verificações por componente
+
+| Componente | Breakpoints | Resultado |
+|---|---|---|
+| **`container-app`** | `1rem` mobile → `1.5rem` ≥40rem; `max-width: 56rem` | ✅ Sem overflow; padding consistente |
+| **Header** | `min-w-0` no bloco de texto; `sm:text-xl` no título | ✅ Subtítulo quebra sem overflow |
+| **`ModeToggle`** | `flex` + botões `flex-1` | ✅ "Compressor"/"PDF" cabem em 2×139px a 320px |
+| **Workspace (compress + pdf)** | `grid gap-6 lg:grid-cols-2` | ✅ 1 col no mobile, 2 col ≥1024 (2×~436px) |
+| **Dropzone** | `h-56 sm:h-64`; hint `text-[11px]` | ✅ Formatos (~130px) cabem no mobile; altura consistente com preview/empty |
+| **`FormatSelector`** | `grid-cols-2 sm:grid-cols-4` | ✅ 2×140px a 320px; 4×206px ≥640 |
+| **`CompressionResultCard`** | `grid-cols-3 gap-4` (fixo) | ✅ A 320px: 3 col de ~75px — "Comprimida" (≈62px @12px) e valores (≈62px @16px) cabem |
+| **`PdfDownloadCard`** | `grid-cols-2 gap-4`; filename `truncate` | ✅ Folga em todas as larguras |
+| **Thumbs do PDF** | `grid-cols-2 sm:grid-cols-3` | ✅ A 320px: tiles de ~138px > 88px de controles sobrepostos |
+| **Controls dos thumbs** | `focus-within:opacity-100`; `lg:opacity-0 lg:group-hover:opacity-100` | ✅ Sempre visíveis no touch; visíveis via foco/hover no desktop |
+| **`RadioGroup` page-size** | `flex flex-wrap gap-2`, chips `flex-1` | ✅ A 320px os 3 chips quebram em 2 linhas (sem overflow) |
+| **`CompressionSettings`** | filename `truncate` + `min-w-0` | ✅ Nome longo corta com "…" — sem empurrar o botão |
+| **CTAs** | `w-full` | ✅ Largura total em todos os breakpoints |
+| **Footer** | `flex-col` → `sm:flex-row` | ✅ Empilhado/centralizado no mobile; em linha no ≥640 |
+| **`loading.tsx` / fallback lazy** | `grid lg:grid-cols-2` | ✅ Empilha no mobile |
+
+### ✅ Execução (correção aplicada)
+
+| Item | Achado | Solução aplicada | Arquivo |
+|---|---|---|---|
+| **Linha "N imagens selecionadas (tamanho) / Limpar todas"** | `flex justify-between` sem wrap: a 320–430px o `<p>` encolhe no flex e quebra em 3 linhas ("20 imagens" / "selecionadas" / "(45.6 MB)"), deixando o botão sozinho na linha | `flex flex-wrap items-center justify-between gap-x-4 gap-y-2` — o botão desce para a segunda linha no mobile e o texto fica em uma linha única | `pdf-generator.widget.tsx` |
+
+### 📌 Notas e decisões
+
+1. **QA estático:** o projeto não tem browser automation (sem Playwright/Puppeteer — só Vitest), então a auditoria foi feita por revisão do CSS utilitário + cálculo de larguras (conteúdo do `container-app` vs. conteúdo mínimo de cada grade). Nenhum fix-width (`w-*` fixo) ou `whitespace-nowrap` foi encontrado — só `truncate`/`min-w-0` em containers flexíveis, o que elimina overflow horizontal estrutural.
+2. **320px como piso:** largura mínima verificada é o conteúdo de 288px. Todos os elementos cabem no piso; grids de 2 col dão ~138–140px por tile/chip, e o `grid-cols-3` do result card é o caso mais justo (75px/col) mas ainda folgado.
+3. **`flex-wrap` na linha de contagem:** única mudança da fase. Sem ela, a quebra de 3 linhas no `<p>` era funcionalmente ok mas esteticamente ruim; com o wrap o botão "Limpar todas" desce, o texto fica íntegro e o `gap-y-2` dá respiro.
+4. **Nenhuma mudança de lógica:** stores, hooks, rotas, contratos e testes intocados (uma única classe utilitária alterada).
+
+### 🔍 Verificação pós-build
+
+- **CSS final:** `flex-wrap`/`gap-x-4`/`gap-y-2` compilados no bundle; nenhuma media query removida.
+- **SSR do `/`:** markup íntegro; a linha de contagem só existe com `files.length > 0` (fora do SSR inicial).
+
+### 🧪 Validação (regressão manual + checks estáticos)
+
+| Checagem | Resultado |
+|---|---|
+| `bun run lint` | ✅ |
+| `bun run typecheck` | ✅ (exit 0) |
+| `bun run test` | ✅ 57 passed (6 arquivos) |
+| `bun run build` | ✅ rotas: `/`, `/_not-found`, `/api/compress`, `/api/pdf`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`, `/twitter-image` |
+
+**Resumo:** auditoria responsiva 320→1920px — layout mobile-first já cobria todos os breakpoints (grades flexíveis, empilhamento vertical, `truncate`+`min-w-0`, capping em 896px). Corrigida a única falha de polish no piso de 320–430px: a linha de contagem de imagens + "Limpar todas" agora usa `flex-wrap`, evitando a quebra em 3 linhas. Nenhuma regressão funcional. **Fase 7 concluída — base pronta para a Fase 8 (Final Validation).**
+
+### Próximos passos (Fase 8 — Final Validation)
+
+1. Re-auditoria geral: CSS final, SSR, rotas estáticas/dinâmicas, contratos de API.
+2. Regressão completa: lint, typecheck, testes (57), build e smoke do servidor de produção.
+3. Checklist final do `UI-PLAN.md` (todas as 8 fases) e atualização do status das fases no `PLAN.md`.

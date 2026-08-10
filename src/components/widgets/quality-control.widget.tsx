@@ -6,6 +6,7 @@ import { RangeSlider } from "@/components/ui";
 export function QualityControl() {
   const quality = useCompressorStore((s) => s.settings.quality);
   const format = useCompressorStore((s) => s.settings.format);
+  const loading = useCompressorStore((s) => s.loading);
   const setSettings = useCompressorStore((s) => s.setSettings);
 
   const isPng = format === "png";
@@ -19,6 +20,7 @@ export function QualityControl() {
         value={quality}
         onChange={(e) => setSettings({ quality: Number(e.target.value) })}
         valueFormat={(v) => `${v}%`}
+        disabled={loading}
       />
       {isPng && (
         <p className="mt-2 text-xs text-text-subtle">
